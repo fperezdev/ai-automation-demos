@@ -9,7 +9,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "ed8bbd12-2ba2-47b0-95e7-e3fc3ca1c5a1",
+      "id": "5672a0c8-38dd-4630-a360-93d3a907ef5b",
       "name": "Upload Page",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -22,7 +22,7 @@
     {
       "parameters": {
         "respondWith": "text",
-        "responseBody": "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>Invoice Automation Demo</title>\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<style>\n:root{--bg:#0b1220;--card:#111b2e;--line:#1e2b45;--text:#e8eefc;--muted:#8fa3c8;--accent:#4f8cff;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444}\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#0b1220,#0e1730);color:var(--text);min-height:100vh}\n.wrap{max-width:840px;margin:0 auto;padding:40px 20px}\nh1{font-size:24px;margin:0 0 6px}.sub{color:var(--muted);margin:0 0 28px}\n.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}\n.drop{border:2px dashed #2b3c60;border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:.15s}\n.drop.hover{border-color:var(--accent);background:#0f1a31}\n.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:9px;padding:11px 18px;font-weight:600;cursor:pointer}\ntable{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}\n.badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}\n.badge.pass{background:rgba(34,197,94,.15);color:var(--ok)}.badge.review{background:rgba(245,158,11,.15);color:var(--warn)}\n.check{color:var(--ok)}.check.bad{color:var(--bad)}\n.spinner{width:22px;height:22px;border:3px solid #2b3c60;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}\n@keyframes spin{to{transform:rotate(360deg)}}\npre{background:#0a1122;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:12px;color:#bcd0f5}\n</style></head><body><div class=\"wrap\">\n<h1>Invoice &amp; document automation</h1>\n<p class=\"sub\">Upload a PDF invoice &mdash; an LLM extracts the fields, business rules validate the totals, and the row is appended to the ledger.</p>\n<div class=\"card\">\n  <div id=\"drop\" class=\"drop\"><p style=\"margin:0 0 12px\">Drop your invoice PDF here</p><button class=\"btn\" id=\"pick\">Choose PDF</button><input id=\"file\" type=\"file\" accept=\"application/pdf\" hidden></div>\n  <p id=\"status\" style=\"margin:14px 0 0;color:var(--muted)\"></p>\n</div>\n<div id=\"result\" style=\"display:none\">\n  <div class=\"card\"><div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px\">\n    <b id=\"doc-title\"></b><span id=\"badge\" class=\"badge\"></span></div>\n    <table id=\"fields\"></table></div>\n  <div class=\"card\"><b>Validation checks</b><table id=\"checks\"></table></div>\n  <div class=\"card\"><b>Raw extracted JSON</b><pre id=\"raw\"></pre></div>\n</div>\n</div>\n<script>\nconst drop=document.getElementById('drop'),file=document.getElementById('file'),status=document.getElementById('status');\nlet t0=0;\ndocument.getElementById('pick').onclick=()=>file.click();\ndrop.onclick=e=>{if(e.target===drop||e.target.tagName==='P')file.click()};\ndrop.ondragover=e=>{e.preventDefault();drop.classList.add('hover')};\ndrop.ondragleave=()=>drop.classList.remove('hover');\ndrop.ondrop=e=>{e.preventDefault();drop.classList.remove('hover');if(e.dataTransfer.files[0])send(e.dataTransfer.files[0])};\nfile.onchange=()=>{if(file.files[0])send(file.files[0])};\nasync function send(f){\n  if(f.type!=='application/pdf'){status.textContent='Please upload a PDF file.';return}\n  status.innerHTML='<span class=\"spinner\"></span> Extracting fields with the LLM&hellip;';\n  t0=performance.now();\n  const fd=new FormData();fd.append('data',f);\n  try{\n    const r=await fetch('/webhook/doc-automation/process',{method:'POST',body:fd});\n    const d=await r.json();\n    render(d);\n    status.textContent='Done in '+((performance.now()-t0)/1000).toFixed(1)+'s';\n  }catch(e){status.textContent='Error: '+e.message}\n}\nfunction render(d){\n  document.getElementById('result').style.display='block';\n  const doc=d.document||{};\n  document.getElementById('doc-title').textContent=(doc.vendor||'Unknown vendor')+' &middot; '+(doc.invoice_number||'?');\n  const badge=document.getElementById('badge');badge.textContent=d.status;badge.className='badge '+(d.status==='PASS'?'pass':'review');\n  const fields=[['Date',doc.date],['Currency',doc.currency],['Subtotal',doc.subtotal],['Tax',doc.tax],['Total',doc.total],['Line items',(doc.line_items||[]).length]];\n  document.getElementById('fields').innerHTML=fields.map(f=>'<tr><th style=\"color:var(--muted);font-weight:500\">'+f[0]+'</th><td>'+f[1]+'</td></tr>').join('');\n  document.getElementById('checks').innerHTML=d.checks.map(c=>'<tr><td class=\"check'+(c.ok?'':' bad')+'\">'+(c.ok?'&#10003;':'&#10007;')+' '+c.name+'</td><td style=\"color:var(--muted)\">'+c.detail+'</td></tr>').join('');\n  document.getElementById('raw').textContent=JSON.stringify(doc,null,2);\n}\n</script></body></html>",
+        "responseBody": "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>Invoice Automation Demo</title>\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<style>\n:root{--bg:#0b1220;--card:#111b2e;--line:#1e2b45;--text:#e8eefc;--muted:#8fa3c8;--accent:#4f8cff;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444}\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#0b1220,#0e1730);color:var(--text);min-height:100vh}\n.wrap{max-width:840px;margin:0 auto;padding:40px 20px}\nh1{font-size:24px;margin:0 0 6px}.sub{color:var(--muted);margin:0 0 28px}\n.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}\n.drop{border:2px dashed #2b3c60;border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:.15s}\n.drop.hover{border-color:var(--accent);background:#0f1a31}\n.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:9px;padding:11px 18px;font-weight:600;cursor:pointer}\ntable{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}\n.badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}\n.badge.pass{background:rgba(34,197,94,.15);color:var(--ok)}.badge.review{background:rgba(245,158,11,.15);color:var(--warn)}\n.check{color:var(--ok)}.check.bad{color:var(--bad)}\n.spinner{width:22px;height:22px;border:3px solid #2b3c60;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}\n@keyframes spin{to{transform:rotate(360deg)}}\npre{background:#0a1122;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:12px;color:#bcd0f5}\n</style></head><body><div class=\"wrap\">\n<h1>Invoice &amp; document automation</h1>\n<p class=\"sub\">Upload a PDF invoice &mdash; an LLM extracts the fields, business rules validate the totals, and the row is appended to the ledger.</p>\n<div class=\"card\">\n  <div id=\"drop\" class=\"drop\"><p style=\"margin:0 0 12px\">Drop your invoice PDF here</p><button class=\"btn\" id=\"pick\">Choose PDF</button><input id=\"file\" type=\"file\" accept=\"application/pdf\" hidden></div>\n  <p id=\"status\" style=\"margin:14px 0 0;color:var(--muted)\"></p>\n</div>\n<div id=\"result\" style=\"display:none\">\n  <div class=\"card\"><div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px\">\n    <b id=\"doc-title\"></b><span id=\"badge\" class=\"badge\"></span></div>\n    <table id=\"fields\"></table></div>\n  <div class=\"card\"><b>Validation checks</b><table id=\"checks\"></table></div>\n  <div class=\"card\"><b>Raw extracted JSON</b><pre id=\"raw\"></pre></div>\n</div>\n</div>\n<script>\nconst drop=document.getElementById('drop'),file=document.getElementById('file'),status=document.getElementById('status');\nlet t0=0;\ndocument.getElementById('pick').onclick=()=>file.click();\ndrop.onclick=e=>{if(e.target===drop||e.target.tagName==='P')file.click()};\ndrop.ondragover=e=>{e.preventDefault();drop.classList.add('hover')};\ndrop.ondragleave=()=>drop.classList.remove('hover');\ndrop.ondrop=e=>{e.preventDefault();drop.classList.remove('hover');if(e.dataTransfer.files[0])send(e.dataTransfer.files[0])};\nfile.onchange=()=>{if(file.files[0])send(file.files[0])};\nasync function send(f){\n  if(f.type!=='application/pdf'){status.textContent='Please upload a PDF file.';return}\n  status.innerHTML='<span class=\"spinner\"></span> Extracting fields with the LLM&hellip;';\n  t0=performance.now();\n  const fd=new FormData();fd.append('data',f);\n  try{\n    const r=await fetch('/webhook/doc-automation/process',{method:'POST',body:fd});\n    const d=await r.json();\n    render(d);\n    status.textContent='Done in '+((performance.now()-t0)/1000).toFixed(1)+'s';\n  }catch(e){status.textContent='Error: '+e.message}\n}\nfunction render(d){\n  document.getElementById('result').style.display='block';\n  const doc=d.document||{};\n  document.getElementById('doc-title').textContent=(doc.vendor||'Unknown vendor')+' · '+(doc.invoice_number||'?');\n  const badge=document.getElementById('badge');badge.textContent=d.status;badge.className='badge '+(d.status==='PASS'?'pass':'review');\n  const fields=[['Date',doc.date],['Currency',doc.currency],['Subtotal',doc.subtotal],['Tax',doc.tax],['Total',doc.total],['Line items',(doc.line_items||[]).length]];\n  document.getElementById('fields').innerHTML=fields.map(f=>'<tr><th style=\"color:var(--muted);font-weight:500\">'+f[0]+'</th><td>'+f[1]+'</td></tr>').join('');\n  document.getElementById('checks').innerHTML=d.checks.map(c=>'<tr><td class=\"check'+(c.ok?'':' bad')+'\">'+(c.ok?'&#10003;':'&#10007;')+' '+c.name+'</td><td style=\"color:var(--muted)\">'+c.detail+'</td></tr>').join('');\n  document.getElementById('raw').textContent=JSON.stringify(doc,null,2);\n  document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});\n}\n</script></body></html>",
         "options": {
           "responseHeaders": {
             "entries": [
@@ -34,7 +34,7 @@
           }
         }
       },
-      "id": "0d062871-3473-4736-b7af-cba467be698d",
+      "id": "2d67f3a7-f35a-44d2-883a-bb1e752c30b4",
       "name": "Serve Upload Page",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -50,7 +50,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "3c910e7d-2e1f-4f45-a848-fc9cc2ec0d9a",
+      "id": "4cd2bcb6-bcdb-46cb-81f6-d2f50db81404",
       "name": "Process Invoice",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -66,7 +66,7 @@
         "binaryPropertyName": "data",
         "options": {}
       },
-      "id": "47a69e18-0621-4955-aff3-82ff7e1e75e0",
+      "id": "ba8e9593-556b-4de5-b055-4c3e74298d6a",
       "name": "Extract PDF Text",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
@@ -79,7 +79,7 @@
       "parameters": {
         "jsCode": "const text = ($input.first().json.text || '').slice(0, 12000);\nconst system = \"You are an invoice data extraction engine. Read the invoice text and return ONLY a JSON object (no markdown, no commentary) with exactly this shape: {\\\"invoice_number\\\": \\\"<string>\\\", \\\"date\\\": \\\"<YYYY-MM-DD>\\\", \\\"vendor\\\": \\\"<string>\\\", \\\"currency\\\": \\\"<3-letter code>\\\", \\\"line_items\\\": [{\\\"description\\\": \\\"<string>\\\", \\\"quantity\\\": <number>, \\\"unit_price\\\": <number>, \\\"amount\\\": <number>}], \\\"subtotal\\\": <number>, \\\"tax\\\": <number or null>, \\\"total\\\": <number>}. Use dot as decimal separator and numbers without currency symbols. transcribe the values exactly as printed on the document. If a field is missing use null.\";\nconst user = 'Invoice text:\\n' + text;\nreturn [{ json: { messages: [\n  { role: 'system', content: system },\n  { role: 'user', content: user }\n] } }];\n"
       },
-      "id": "4579ae05-27b0-465f-a52e-2610b6f15182",
+      "id": "ba3350af-473d-4991-8d80-b760ffd1b2df",
       "name": "Build LLM Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -99,7 +99,7 @@
           "timeout": 60000
         }
       },
-      "id": "b7ae9bfd-5719-4178-ad70-b41d1d1befdc",
+      "id": "d8ce5454-e579-4087-bb9e-76e023adb4eb",
       "name": "LLM Extract",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -112,7 +112,7 @@
       "parameters": {
         "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim();\nif (content.startsWith('```')) {\n  content = content.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\n}\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\nif (start === -1 || end === -1) {\n  throw new Error('LLM did not return JSON: ' + content.slice(0, 200));\n}\nconst doc = JSON.parse(content.slice(start, end + 1));\n\nconst num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));\nconst checks = [];\nfor (const field of ['invoice_number', 'date', 'vendor', 'currency', 'total']) {\n  const ok = doc[field] !== undefined && doc[field] !== null && doc[field] !== '';\n  checks.push({ name: 'required field: ' + field, ok, detail: String(doc[field] ?? 'missing') });\n}\nconst dateOk = typeof doc.date === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(doc.date);\nchecks.push({ name: 'date format YYYY-MM-DD', ok: dateOk, detail: String(doc.date) });\n\nconst items = Array.isArray(doc.line_items) ? doc.line_items : [];\nconst itemsSum = items.reduce((acc, it) => acc + Number(it.amount ?? (num(it.quantity) * num(it.unit_price)) ?? 0), 0);\nconst subtotal = num(doc.subtotal) ?? 0;\nconst tax = num(doc.tax) ?? 0;\nconst total = num(doc.total) ?? 0;\nconst subtotalOk = Math.abs(itemsSum - subtotal) <= 0.02;\nchecks.push({ name: 'subtotal matches line items', ok: subtotalOk, detail: 'items=' + itemsSum.toFixed(2) + ' stated=' + subtotal.toFixed(2) });\nconst totalOk = Math.abs(subtotal + tax - total) <= 0.02;\nchecks.push({ name: 'total matches subtotal + tax', ok: totalOk, detail: 'expected=' + (subtotal + tax).toFixed(2) + ' stated=' + total.toFixed(2) });\n\nconst status = checks.every((c) => c.ok) ? 'PASS' : 'REVIEW';\n\nreturn [{ json: {\n  status,\n  document: doc,\n  checks,\n  items_count: items.length\n} }];\n"
       },
-      "id": "00335db9-567f-4f48-a4cf-7c2665fe3fc9",
+      "id": "c7e272fb-edb4-4739-89fc-88b4e08285a0",
       "name": "Parse & Validate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -166,7 +166,7 @@
           "createIfNotExists": true
         }
       },
-      "id": "99f0843f-d0d6-488b-9598-7f22d886d193",
+      "id": "6f44edb2-fad9-463e-a049-b951ea00a0df",
       "name": "Create Ledger Table",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -199,7 +199,7 @@
         },
         "options": {}
       },
-      "id": "f0db61a5-5844-4903-bb9b-b0fa368642d8",
+      "id": "561419a6-b8bd-47f1-9caf-f48652928b16",
       "name": "Log to Ledger",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -223,7 +223,7 @@
           }
         }
       },
-      "id": "e19b7da4-60e1-4340-978b-d73648f2ab15",
+      "id": "f1c7a22c-86a1-4d03-8aae-f577f8998e2f",
       "name": "Report",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -321,7 +321,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "08ad4aec-2b87-4e37-bcff-bb3698db5a12",
+  "versionId": "77df3f29-cc56-4a4b-9ab1-f55b3b246752",
   "meta": {
     "templateCredsSetupCompleted": true
   },

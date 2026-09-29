@@ -71,12 +71,13 @@ async function send(f){
 function render(d){
   document.getElementById('result').style.display='block';
   const doc=d.document||{};
-  document.getElementById('doc-title').textContent=(doc.vendor||'Unknown vendor')+' &middot; '+(doc.invoice_number||'?');
+  document.getElementById('doc-title').textContent=(doc.vendor||'Unknown vendor')+' \u00b7 '+(doc.invoice_number||'?');
   const badge=document.getElementById('badge');badge.textContent=d.status;badge.className='badge '+(d.status==='PASS'?'pass':'review');
   const fields=[['Date',doc.date],['Currency',doc.currency],['Subtotal',doc.subtotal],['Tax',doc.tax],['Total',doc.total],['Line items',(doc.line_items||[]).length]];
   document.getElementById('fields').innerHTML=fields.map(f=>'<tr><th style="color:var(--muted);font-weight:500">'+f[0]+'</th><td>'+f[1]+'</td></tr>').join('');
   document.getElementById('checks').innerHTML=d.checks.map(c=>'<tr><td class="check'+(c.ok?'':' bad')+'">'+(c.ok?'&#10003;':'&#10007;')+' '+c.name+'</td><td style="color:var(--muted)">'+c.detail+'</td></tr>').join('');
   document.getElementById('raw').textContent=JSON.stringify(doc,null,2);
+  document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
 }
 </script></body></html>"""
 
@@ -329,6 +330,7 @@ document.getElementById('send').onclick=async()=>{
   document.getElementById('reasons').innerHTML=(d.reasons||[]).map(x=>'<li>'+x+'</li>').join('');
   document.getElementById('angle').textContent=d.suggested_angle||'';
   document.getElementById('email_draft').textContent=d.followup_email||'';
+  document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
 };
 function v(id){return document.getElementById(id).value}
 </script></body></html>"""
@@ -350,6 +352,7 @@ return [{ json: {
         '"suggested_angle": "<one sentence on how to approach>", '
         '"followup_email": "<short, friendly follow-up email draft in English, 3-4 sentences>"}. '
         "Score based on: clarity of need, company fit, budget signals and urgency in the message. "
+        "The follow-up email must propose next steps over email or chat — never suggest a phone or video call. "
         "No markdown, no commentary."
     )
 

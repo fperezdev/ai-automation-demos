@@ -1,0 +1,323 @@
+{
+  "id": "demoLeadGen00001",
+  "name": "Demo 02 · Lead Generation & Enrichment",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "lead-gen",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6f4479ab-a35e-4a5e-8e9c-98d4e4f7811a",
+      "name": "Landing Page",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "demo-lead-page"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>Lead Gen Demo</title>\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<style>\n:root{--bg:#0b1220;--card:#111b2e;--line:#1e2b45;--text:#e8eefc;--muted:#8fa3c8;--accent:#4f8cff;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444}\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#0b1220,#0e1730);color:var(--text);min-height:100vh}\n.wrap{max-width:760px;margin:0 auto;padding:40px 20px}\nh1{font-size:24px;margin:0 0 6px}.sub{color:var(--muted);margin:0 0 28px}\n.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}\nlabel{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}\ninput,textarea{width:100%;background:#0a1122;border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px 12px;font:inherit}\n.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:9px;padding:11px 18px;font-weight:600;cursor:pointer;margin-top:16px}\n.gauge{font-size:34px;font-weight:800}.tier{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}\n.tier.hot{background:rgba(239,68,68,.15);color:var(--bad)}.tier.warm{background:rgba(245,158,11,.15);color:var(--warn)}.tier.cold{background:rgba(143,163,200,.15);color:var(--muted)}\nul{margin:8px 0 0;padding-left:20px;color:var(--muted)}li{margin:4px 0}\npre{background:#0a1122;border:1px solid var(--line);border-radius:10px;padding:12px;white-space:pre-wrap;font-size:13px;color:#bcd0f5}\n</style></head><body><div class=\"wrap\">\n<h1>Lead generation &amp; enrichment</h1>\n<p class=\"sub\">The form posts to n8n: the workflow enriches the lead, scores it with an LLM and drafts the follow-up email.</p>\n<div class=\"card\">\n  <label>Name</label><input id=\"name\" placeholder=\"Jane Cooper\">\n  <label>Email</label><input id=\"email\" placeholder=\"jane@company.com\">\n  <label>Company</label><input id=\"company\" placeholder=\"Company Inc.\">\n  <label>Website</label><input id=\"website\" placeholder=\"https://example.com\">\n  <label>What do they need?</label><textarea id=\"message\" rows=\"3\" placeholder=\"They asked about automating their invoicing...\"></textarea>\n  <button class=\"btn\" id=\"send\">Score lead</button>\n</div>\n<div id=\"result\" style=\"display:none\">\n  <div class=\"card\"><div style=\"display:flex;align-items:center;gap:16px\"><div class=\"gauge\" id=\"score\"></div><span class=\"tier\" id=\"tier\"></span></div><ul id=\"reasons\"></ul></div>\n  <div class=\"card\"><b>Suggested angle</b><p id=\"angle\" style=\"color:var(--muted)\"></p><b>Follow-up draft</b><pre id=\"email_draft\"></pre></div>\n</div>\n</div>\n<script>\ndocument.getElementById('send').onclick=async()=>{\n  const lead={name:v('name'),email:v('email'),company:v('company'),website:v('website'),message:v('message')};\n  const r=await fetch('/webhook/lead-gen/process',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)});\n  const d=await r.json();\n  document.getElementById('result').style.display='block';\n  document.getElementById('score').textContent=d.score;\n  const t=document.getElementById('tier');t.textContent=d.tier;t.className='tier '+String(d.tier||'').toLowerCase();\n  document.getElementById('reasons').innerHTML=(d.reasons||[]).map(x=>'<li>'+x+'</li>').join('');\n  document.getElementById('angle').textContent=d.suggested_angle||'';\n  document.getElementById('email_draft').textContent=d.followup_email||'';\n};\nfunction v(id){return document.getElementById(id).value}\n</script></body></html>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "78f9e1fa-9681-425d-b76e-1fa29467acb6",
+      "name": "Serve Landing Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-gen/process",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "faea5eed-4dd5-4bb6-98f9-63c61c85e290",
+      "name": "Process Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        220
+      ],
+      "webhookId": "demo-lead-process"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst lead = raw.body || raw;\nconst website = (lead.website || '').trim();\nreturn [{ json: {\n  lead,\n  website,\n  messages: [\n    { role: 'system', content: \"You are a B2B lead qualification analyst. Given a lead, return ONLY a JSON object: {\\\"score\\\": <0-100 integer>, \\\"tier\\\": \\\"HOT\\\"|\\\"WARM\\\"|\\\"COLD\\\", \\\"reasons\\\": [\\\"...\\\"], \\\"suggested_angle\\\": \\\"<one sentence on how to approach>\\\", \\\"followup_email\\\": \\\"<short, friendly follow-up email draft in English, 3-4 sentences>\\\"}. Score based on: clarity of need, company fit, budget signals and urgency in the message. No markdown, no commentary.\" },\n    { role: 'user', content: 'Lead data (JSON):\\n' + JSON.stringify(lead, null, 2) }\n  ]\n} }];\n"
+      },
+      "id": "b477843a-2ffb-4610-a4ea-cc87fcce588f",
+      "name": "Build Research Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $input.first().json;\nlet siteText = '';\nconst url = (prev.website || '').trim();\nif (url) {\n  try {\n    const html = await this.helpers.httpRequest({ method: 'GET', url, timeout: 10000, encoding: 'utf8' });\n    siteText = String(html)\n      .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n      .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n      .replace(/<[^>]+>/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim()\n      .slice(0, 5000);\n  } catch (e) {\n    siteText = '';\n  }\n}\nconst messages = prev.messages.slice();\nif (siteText) {\n  messages.push({ role: 'user', content: 'Website content for enrichment:\\n' + siteText });\n}\nreturn [{ json: { messages, website_text: siteText } }];\n"
+      },
+      "id": "15ce19f3-adfa-4ea2-85be-ab4057b4c60d",
+      "name": "Enrich Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8770/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0 }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "c96301c7-833c-4306-b950-eb4e24ddc2c9",
+      "name": "LLM Score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\nif (start === -1) throw new Error('LLM did not return JSON: ' + content.slice(0, 200));\nconst out = JSON.parse(content.slice(start, end + 1));\n\nconst lead = $('Process Lead').first().json.body;\nconst emailOk = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(lead.email || '');\nconst scoreOk = Number.isFinite(Number(out.score)) && Number(out.score) >= 0 && Number(out.score) <= 100;\nconst tierOk = ['HOT', 'WARM', 'COLD'].includes(String(out.tier).toUpperCase());\n\nreturn [{ json: {\n  score: Number(out.score),\n  tier: String(out.tier || '').toUpperCase(),\n  reasons: Array.isArray(out.reasons) ? out.reasons : [],\n  suggested_angle: out.suggested_angle || '',\n  followup_email: out.followup_email || '',\n  lead,\n  checks: [\n    { name: 'valid lead email', ok: emailOk, detail: lead.email || 'missing' },\n    { name: 'score in range 0-100', ok: scoreOk, detail: String(out.score) },\n    { name: 'tier is HOT/WARM/COLD', ok: tierOk, detail: String(out.tier) }\n  ]\n} }];\n"
+      },
+      "id": "60ca6081-e7b1-4b7d-86bb-02acbfa350a5",
+      "name": "Parse Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ score: $json.score, tier: $json.tier, reasons: $json.reasons, suggested_angle: $json.suggested_angle, followup_email: $json.followup_email, checks: $json.checks }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a4fbaa00-6217-4d11-8228-bf85ccb97985",
+      "name": "Report",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1120,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "leads",
+        "columns": {
+          "column": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "email",
+              "type": "string"
+            },
+            {
+              "name": "company",
+              "type": "string"
+            },
+            {
+              "name": "website",
+              "type": "string"
+            },
+            {
+              "name": "score",
+              "type": "number"
+            },
+            {
+              "name": "tier",
+              "type": "string"
+            },
+            {
+              "name": "message",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "cc237170-9535-458a-bca5-8a86526a0144",
+      "name": "Create Leads Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $('Parse Lead').first().json.lead.name }}",
+            "email": "={{ $('Parse Lead').first().json.lead.email }}",
+            "company": "={{ $('Parse Lead').first().json.lead.company }}",
+            "website": "={{ $('Parse Lead').first().json.lead.website }}",
+            "score": "={{ Number($('Parse Lead').first().json.score) }}",
+            "tier": "={{ $('Parse Lead').first().json.tier }}",
+            "message": "={{ $('Parse Lead').first().json.lead.message }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "1d1e103d-5cc4-42ac-9997-cf43cbe276dd",
+      "name": "Log Lead",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Landing Page": {
+      "main": [
+        [
+          {
+            "node": "Serve Landing Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Lead": {
+      "main": [
+        [
+          {
+            "node": "Build Research Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Research Prompt": {
+      "main": [
+        [
+          {
+            "node": "Enrich Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Lead": {
+      "main": [
+        [
+          {
+            "node": "LLM Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Score": {
+      "main": [
+        [
+          {
+            "node": "Parse Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Lead": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Leads Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Leads Table": {
+      "main": [
+        [
+          {
+            "node": "Log Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "35cb993c-3b51-4652-bd12-d8a9c904ff78",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "pinData": {}
+}

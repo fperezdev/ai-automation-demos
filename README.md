@@ -8,9 +8,9 @@ These are the reference implementations behind my Upwork services. Each demo is 
 
 | # | Demo | What it does | Status |
 |---|------|--------------|--------|
-| 01 | [Invoice & document automation](docs/doc-automation.md) | Upload a PDF invoice → LLM extracts structured fields → validation rules flag mismatches → CSV/Sheets row + HTML report | ✅ |
-| 02 | [Lead generation & enrichment](docs/lead-gen.md) | Form webhook → enrich + score leads with an LLM → structured table → follow-up email draft | 🚧 |
-| 03 | [AI support agent](docs/ai-support-agent.md) | Webchat agent on n8n: business FAQ + lead qualification + human handoff | 🚧 |
+| 01 | [Invoice & document automation](docs/doc-automation.md) | Upload a PDF invoice → LLM extracts structured fields → validation rules flag mismatches → Data Table ledger + HTML report | ✅ |
+| 02 | [Lead generation & enrichment](docs/lead-gen.md) | Form webhook → site enrichment + LLM scoring (HOT/WARM/COLD) → Data Table + follow-up email draft | ✅ |
+| 03 | [AI support agent](docs/ai-support-agent.md) | Webchat agent on n8n: business FAQ + qualification + human handoff with transcript logging | ✅ |
 
 ## Architecture
 

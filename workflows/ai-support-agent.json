@@ -1,0 +1,334 @@
+{
+  "id": "demoSupportAgent1",
+  "name": "Demo 03 · AI Support Agent (webchat + handoff)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "support-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3abda179-e784-479c-ac47-b1ee500106d7",
+      "name": "Chat Page",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "demo-agent-page"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>AI Support Agent Demo</title>\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<style>\n:root{--bg:#0b1220;--card:#111b2e;--line:#1e2b45;--text:#e8eefc;--muted:#8fa3c8;--accent:#4f8cff;--ok:#22c55e;--warn:#f59e0b}\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#0b1220,#0e1730);color:var(--text);height:100vh;display:flex}\n.wrap{max-width:980px;margin:0 auto;padding:28px 20px;display:flex;gap:18px;width:100%}\n.chat{flex:2;background:var(--card);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}\n.chat header{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700}\n.msgs{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:10px}\n.msg{max-width:78%;padding:10px 14px;border-radius:12px;white-space:pre-wrap}\n.msg.user{align-self:flex-end;background:var(--accent);color:#fff}\n.msg.bot{align-self:flex-start;background:#0a1122;border:1px solid var(--line)}\n.typing{color:var(--muted);font-style:italic}\n.form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}\ninput{flex:1;background:#0a1122;border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px 12px;font:inherit}\n.btn{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:10px 16px;font-weight:600;cursor:pointer}\n.trace{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}\n.trace h3{margin:0 0 12px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}\n.trace .row{margin:10px 0;font-size:14px}.trace .k{color:var(--muted);font-size:12px}\n.badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}\n.badge.handoff{background:rgba(245,158,11,.15);color:var(--warn)}.badge.auto{background:rgba(34,197,94,.15);color:var(--ok)}\n</style></head><body><div class=\"wrap\">\n<div class=\"chat\"><header>Northwind Bakery · Support</header>\n<div class=\"msgs\" id=\"msgs\"><div class=\"msg bot\">Hi! I&#39;m the Northwind assistant. Ask about orders, pricing or delivery — if I can&#39;t help, I&#39;ll pass you to a human.</div></div>\n<div class=\"form\"><input id=\"input\" placeholder=\"Type a message...\" autocomplete=\"off\"><button class=\"btn\" id=\"send\">Send</button></div></div>\n<div class=\"trace\"><h3>Agent trace</h3><div id=\"trace\"><p style=\"color:var(--muted)\">Waiting for the first message...</p></div></div>\n</div>\n<script>\nconst msgs=document.getElementById('msgs'),input=document.getElementById('input'),trace=document.getElementById('trace');\nlet history=[];\nconst sessionId='s-'+Math.random().toString(36).slice(2,10);\ndocument.getElementById('send').onclick=send;\ninput.addEventListener('keydown',e=>{if(e.key==='Enter')send()});\nfunction add(text,cls){const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}\nasync function send(){\n  const text=input.value.trim();if(!text)return;input.value='';\n  add(text,'user');history.push({role:'user',content:text});\n  const t=add('typing...','bot typing');\n  try{\n    const r=await fetch('/webhook/support-agent/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,messages:history})});\n    const d=await r.json();\n    t.remove();add(d.reply,'bot');history.push({role:'assistant',content:d.reply});\n    trace.innerHTML='<div class=\"row\"><div class=\"k\">intent</div><div>'+d.intent+'</div></div>'\n      +'<div class=\"row\"><div class=\"k\">sentiment</div><div>'+d.sentiment+'</div></div>'\n      +'<div class=\"row\"><span class=\"badge '+(d.handoff?'handoff':'auto')+'\">'+(d.handoff?'HANDOFF TO HUMAN':'AUTO-RESOLVED')+'</span></div>'\n      +(d.handoff_reason?'<div class=\"row\"><div class=\"k\">reason</div><div>'+d.handoff_reason+'</div></div>':'');\n  }catch(e){t.textContent='Error: '+e.message}\n}\n</script></body></html>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "71b18f8e-4809-4859-8be2-25f8a07e1928",
+      "name": "Serve Chat Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-agent/chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "10d14446-bbb9-4756-ba65-80b556e2c7e0",
+      "name": "Chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        220
+      ],
+      "webhookId": "demo-agent-chat"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst payload = raw.body || raw;\nconst messages = Array.isArray(payload.messages) ? payload.messages.slice(-12) : [];\nconst system = \"You are the support assistant for 'Northwind Bakery', a small bakery. You answer questions about products, prices, opening hours and delivery, and you help customers place orders. Business facts: open Mon-Sat 8:00-19:00; sourdough $6; gluten-free bread $8; delivery within the city $5 (free over $40); custom cakes need 48h notice; refunds handled by a human. Rules: be concise and friendly. Never invent prices or policies. Escalate (handoff=true) when: the customer asks for a refund or complaint, asks for something outside the menu, is clearly frustrated, or explicitly asks for a human, or provides contact details to be called back. Return ONLY a JSON object: {\\\"reply\\\": \\\"<message to the customer>\\\", \\\"intent\\\": \\\"<short label>\\\", \\\"sentiment\\\": \\\"positive\\\"|\\\"neutral\\\"|\\\"negative\\\", \\\"handoff\\\": true|false, \\\"handoff_reason\\\": \\\"<short reason or empty>\\\"}\";\nreturn [{ json: { messages: [{ role: 'system', content: system }].concat(messages) } }];\n"
+      },
+      "id": "411000d2-561b-4be2-9026-a57c29d6a6f1",
+      "name": "Agent Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8770/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0.2 }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "afc58642-8f50-4ad7-8002-9857cc854156",
+      "name": "LLM Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\nif (start === -1) throw new Error('Agent did not return JSON: ' + content.slice(0, 200));\nconst out = JSON.parse(content.slice(start, end + 1));\nconst chatRaw = $('Chat').first().json;\nconst chatBody = chatRaw.body || chatRaw;\nconst session = chatBody.session_id || 'demo-session';\n\nreturn [{ json: {\n  reply: out.reply || 'Let me connect you with a human.',\n  intent: out.intent || 'unknown',\n  sentiment: out.sentiment || 'neutral',\n  handoff: Boolean(out.handoff),\n  handoff_reason: out.handoff_reason || '',\n  session_id: session,\n  transcript: (chatBody.messages || []).map(m => (m.role === 'user' ? 'Customer: ' : 'Agent: ') + m.content).join('\\n'),\n} }];\n"
+      },
+      "id": "45e081f2-e282-44ae-a446-3a4d2fc65ae7",
+      "name": "Parse Agent Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, intent: $json.intent, sentiment: $json.sentiment, handoff: $json.handoff, handoff_reason: $json.handoff_reason }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c8124e4a-4360-4f26-b647-1f5e78934431",
+      "name": "Reply",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        900,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "427a0b5a-2730-4b5d-8521-537495491b4d",
+              "leftValue": "={{ $json.handoff }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b250ed49-f6e7-4393-98ec-5fd53e139a49",
+      "name": "Needs Handoff?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "handoffs",
+        "columns": {
+          "column": [
+            {
+              "name": "session_id",
+              "type": "string"
+            },
+            {
+              "name": "reason",
+              "type": "string"
+            },
+            {
+              "name": "intent",
+              "type": "string"
+            },
+            {
+              "name": "sentiment",
+              "type": "string"
+            },
+            {
+              "name": "transcript",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "72ef2a0a-1682-41ce-9e47-ab8883ea3b63",
+      "name": "Create Handoffs Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "handoffs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Parse Agent Reply').first().json.session_id }}",
+            "reason": "={{ $('Parse Agent Reply').first().json.handoff_reason }}",
+            "intent": "={{ $('Parse Agent Reply').first().json.intent }}",
+            "sentiment": "={{ $('Parse Agent Reply').first().json.sentiment }}",
+            "transcript": "={{ $('Parse Agent Reply').first().json.transcript }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "62659bf1-4f5d-418f-bfb2-79347cf1af06",
+      "name": "Log Handoff",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Chat Page": {
+      "main": [
+        [
+          {
+            "node": "Serve Chat Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat": {
+      "main": [
+        [
+          {
+            "node": "Agent Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Prompt": {
+      "main": [
+        [
+          {
+            "node": "LLM Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Agent Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Agent Reply": {
+      "main": [
+        [
+          {
+            "node": "Reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Needs Handoff?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Handoff?": {
+      "main": [
+        [
+          {
+            "node": "Create Handoffs Table",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Create Handoffs Table": {
+      "main": [
+        [
+          {
+            "node": "Log Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a6781c6d-2220-4c75-9c4e-9bcdaaaf77cd",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "pinData": {}
+}

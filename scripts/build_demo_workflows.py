@@ -201,7 +201,7 @@ def build_doc_automation():
             "url": LLM_URL,
             "sendBody": True,
             "specifyBody": "json",
-            "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0 }) }}",
+            "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0, response_format: { type: 'json_object' } }) }}",
             "options": {"timeout": 60000},
         }, [660, 220]),
 
@@ -424,7 +424,7 @@ return [{ json: {
         node("LLM Score", "n8n-nodes-base.httpRequest", 4.2, {
             "method": "POST", "url": LLM_URL,
             "sendBody": True, "specifyBody": "json",
-            "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0 }) }}",
+            "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0, response_format: { type: 'json_object' } }) }}",
             "options": {"timeout": 60000},
         }, [660, 220]),
         node("Parse Lead", "n8n-nodes-base.code", 2, {"jsCode": parse_lead_js}, [880, 220]),
@@ -559,13 +559,27 @@ return [{ json: { messages: [{ role: 'system', content: system }].concat(message
         '"handoff": true|false, "handoff_reason": "<short reason or empty>"}'
     )
 
-    parse_agent_js = """const resp = $input.first().json;
+    parse_agent_js = r"""const resp = $input.first().json;
 let content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';
 content = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
 const start = content.indexOf('{');
 const end = content.lastIndexOf('}');
-if (start === -1) throw new Error('Agent did not return JSON: ' + content.slice(0, 200));
-const out = JSON.parse(content.slice(start, end + 1));
+
+let out;
+if (start === -1 || end === -1) {
+  // The model replied with plain text instead of JSON: use it as the reply and
+  // infer handoff from the wording so the demo never breaks.
+  const mentionsHuman = /human|team member|passed your request|someone will follow|real person/i.test(content);
+  out = {
+    reply: content || 'Let me connect you with a human.',
+    intent: 'unstructured_reply',
+    sentiment: 'neutral',
+    handoff: mentionsHuman,
+    handoff_reason: mentionsHuman ? 'Escalated in free-form reply' : '',
+  };
+} else {
+  out = JSON.parse(content.slice(start, end + 1));
+}
 const chatRaw = $('Chat').first().json;
 const chatBody = chatRaw.body || chatRaw;
 const session = chatBody.session_id || 'demo-session';
@@ -577,7 +591,7 @@ return [{ json: {
   handoff: Boolean(out.handoff),
   handoff_reason: out.handoff_reason || '',
   session_id: session,
-  transcript: (chatBody.messages || []).map(m => (m.role === 'user' ? 'Customer: ' : 'Agent: ') + m.content).join('\\n'),
+  transcript: (chatBody.messages || []).map(m => (m.role === 'user' ? 'Customer: ' : 'Agent: ') + m.content).join('\n'),
 } }];
 """
 
@@ -596,7 +610,7 @@ return [{ json: {
         node("LLM Agent", "n8n-nodes-base.httpRequest", 4.2, {
             "method": "POST", "url": LLM_URL,
             "sendBody": True, "specifyBody": "json",
-            "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0.2 }) }}",
+            "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0.2, response_format: { type: 'json_object' } }) }}",
             "options": {"timeout": 60000},
         }, [440, 220]),
         node("Parse Agent Reply", "n8n-nodes-base.code", 2, {"jsCode": parse_agent_js}, [660, 220]),

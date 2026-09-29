@@ -9,7 +9,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "e154e29b-bb97-4383-9ff8-1baa4b76706c",
+      "id": "0649162a-4a85-4395-8d20-c5e32bcb844e",
       "name": "Landing Page",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -34,7 +34,7 @@
           }
         }
       },
-      "id": "7532dfd1-e4b2-4583-b614-9caf642c876a",
+      "id": "c0ce1aca-08f1-474c-8ef8-99fe87fd5e51",
       "name": "Serve Landing Page",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -50,7 +50,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "779cb61f-1c01-4065-a5a1-b5ed58e3f5ea",
+      "id": "12c182dc-e16c-402c-b8fd-13a1f86f7d32",
       "name": "Process Lead",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -64,7 +64,7 @@
       "parameters": {
         "jsCode": "const raw = $input.first().json;\nconst lead = raw.body || raw;\nconst website = (lead.website || '').trim();\nreturn [{ json: {\n  lead,\n  website,\n  messages: [\n    { role: 'system', content: \"You are a B2B lead qualification analyst. Given a lead, return ONLY a JSON object: {\\\"score\\\": <0-100 integer>, \\\"tier\\\": \\\"HOT\\\"|\\\"WARM\\\"|\\\"COLD\\\", \\\"reasons\\\": [\\\"...\\\"], \\\"suggested_angle\\\": \\\"<one sentence on how to approach>\\\", \\\"followup_email\\\": \\\"<short, friendly follow-up email draft in English, 3-4 sentences>\\\"}. Score based on: clarity of need, company fit, budget signals and urgency in the message. The follow-up email must propose next steps over email or chat \\u2014 never suggest a phone or video call. No markdown, no commentary.\" },\n    { role: 'user', content: 'Lead data (JSON):\\n' + JSON.stringify(lead, null, 2) }\n  ]\n} }];\n"
       },
-      "id": "5116fefe-4f1a-4a38-8791-7aa36828d799",
+      "id": "763c3835-b71f-419e-9b66-809d6b947f0c",
       "name": "Build Research Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -77,7 +77,7 @@
       "parameters": {
         "jsCode": "const prev = $input.first().json;\nlet siteText = '';\nconst url = (prev.website || '').trim();\nif (url) {\n  try {\n    const html = await this.helpers.httpRequest({ method: 'GET', url, timeout: 10000, encoding: 'utf8' });\n    siteText = String(html)\n      .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n      .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n      .replace(/<[^>]+>/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim()\n      .slice(0, 5000);\n  } catch (e) {\n    siteText = '';\n  }\n}\nconst messages = prev.messages.slice();\nif (siteText) {\n  messages.push({ role: 'user', content: 'Website content for enrichment:\\n' + siteText });\n}\nreturn [{ json: { messages, website_text: siteText } }];\n"
       },
-      "id": "8ffddddf-22e3-4f0e-a033-836673a31ac9",
+      "id": "e17fef9e-ce6b-4750-ac50-710c4543ddb8",
       "name": "Enrich Lead",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -92,12 +92,12 @@
         "url": "http://127.0.0.1:8770/chat",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0 }) }}",
+        "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0, response_format: { type: 'json_object' } }) }}",
         "options": {
           "timeout": 60000
         }
       },
-      "id": "91f73efd-fd04-4927-821e-4cb6e3ffc1bd",
+      "id": "e8ff01fc-c0e6-4551-9c2f-fbaefe05191f",
       "name": "LLM Score",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -110,7 +110,7 @@
       "parameters": {
         "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\nif (start === -1) throw new Error('LLM did not return JSON: ' + content.slice(0, 200));\nconst out = JSON.parse(content.slice(start, end + 1));\n\nconst lead = $('Process Lead').first().json.body;\nconst emailOk = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(lead.email || '');\nconst scoreOk = Number.isFinite(Number(out.score)) && Number(out.score) >= 0 && Number(out.score) <= 100;\nconst tierOk = ['HOT', 'WARM', 'COLD'].includes(String(out.tier).toUpperCase());\n\nreturn [{ json: {\n  score: Number(out.score),\n  tier: String(out.tier || '').toUpperCase(),\n  reasons: Array.isArray(out.reasons) ? out.reasons : [],\n  suggested_angle: out.suggested_angle || '',\n  followup_email: out.followup_email || '',\n  lead,\n  checks: [\n    { name: 'valid lead email', ok: emailOk, detail: lead.email || 'missing' },\n    { name: 'score in range 0-100', ok: scoreOk, detail: String(out.score) },\n    { name: 'tier is HOT/WARM/COLD', ok: tierOk, detail: String(out.tier) }\n  ]\n} }];\n"
       },
-      "id": "d68dc11b-46c5-43b5-a142-4202d50bb962",
+      "id": "d8a02d02-2e43-408b-9e7c-66dfb2ca7c38",
       "name": "Parse Lead",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -134,7 +134,7 @@
           }
         }
       },
-      "id": "a4046dd8-b338-48a8-b4da-45c078241047",
+      "id": "e36809fa-851f-4bf7-9a59-243c4d60c838",
       "name": "Report",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -184,7 +184,7 @@
           "createIfNotExists": true
         }
       },
-      "id": "44f0ff2f-1fb5-444e-88fc-f81cfc637234",
+      "id": "078cf880-2a5e-4aa5-8d57-3c0b9b144b8f",
       "name": "Create Leads Table",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -216,7 +216,7 @@
         },
         "options": {}
       },
-      "id": "36cd26e9-aa75-4d58-877a-4e9fb4975712",
+      "id": "723b3704-67b6-4d64-b102-d65753434108",
       "name": "Log Lead",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -314,7 +314,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "f7f43e99-dd40-4a1c-bee6-9d63a0392fcb",
+  "versionId": "d663071a-5737-41ed-a877-a4d676fde81a",
   "meta": {
     "templateCredsSetupCompleted": true
   },

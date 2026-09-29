@@ -9,7 +9,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "5672a0c8-38dd-4630-a360-93d3a907ef5b",
+      "id": "193e2a05-9d3c-4203-87ea-e7fb8c516404",
       "name": "Upload Page",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -34,7 +34,7 @@
           }
         }
       },
-      "id": "2d67f3a7-f35a-44d2-883a-bb1e752c30b4",
+      "id": "42a5fdd0-7365-4d35-b354-9731b64c5b1d",
       "name": "Serve Upload Page",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -50,7 +50,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "4cd2bcb6-bcdb-46cb-81f6-d2f50db81404",
+      "id": "9eafc7a4-cce8-4bda-ac89-73cb84ffd4a4",
       "name": "Process Invoice",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -66,7 +66,7 @@
         "binaryPropertyName": "data",
         "options": {}
       },
-      "id": "ba8e9593-556b-4de5-b055-4c3e74298d6a",
+      "id": "91e30d86-8aa5-445d-a802-49b0684505b5",
       "name": "Extract PDF Text",
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
@@ -79,7 +79,7 @@
       "parameters": {
         "jsCode": "const text = ($input.first().json.text || '').slice(0, 12000);\nconst system = \"You are an invoice data extraction engine. Read the invoice text and return ONLY a JSON object (no markdown, no commentary) with exactly this shape: {\\\"invoice_number\\\": \\\"<string>\\\", \\\"date\\\": \\\"<YYYY-MM-DD>\\\", \\\"vendor\\\": \\\"<string>\\\", \\\"currency\\\": \\\"<3-letter code>\\\", \\\"line_items\\\": [{\\\"description\\\": \\\"<string>\\\", \\\"quantity\\\": <number>, \\\"unit_price\\\": <number>, \\\"amount\\\": <number>}], \\\"subtotal\\\": <number>, \\\"tax\\\": <number or null>, \\\"total\\\": <number>}. Use dot as decimal separator and numbers without currency symbols. transcribe the values exactly as printed on the document. If a field is missing use null.\";\nconst user = 'Invoice text:\\n' + text;\nreturn [{ json: { messages: [\n  { role: 'system', content: system },\n  { role: 'user', content: user }\n] } }];\n"
       },
-      "id": "ba3350af-473d-4991-8d80-b760ffd1b2df",
+      "id": "1354c3bb-1cd5-4349-a3b6-d1b76710733d",
       "name": "Build LLM Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -94,12 +94,12 @@
         "url": "http://127.0.0.1:8770/chat",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0 }) }}",
+        "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0, response_format: { type: 'json_object' } }) }}",
         "options": {
           "timeout": 60000
         }
       },
-      "id": "d8ce5454-e579-4087-bb9e-76e023adb4eb",
+      "id": "0cacfedd-523f-49fb-a8e4-920f31ecb256",
       "name": "LLM Extract",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -112,7 +112,7 @@
       "parameters": {
         "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim();\nif (content.startsWith('```')) {\n  content = content.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\n}\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\nif (start === -1 || end === -1) {\n  throw new Error('LLM did not return JSON: ' + content.slice(0, 200));\n}\nconst doc = JSON.parse(content.slice(start, end + 1));\n\nconst num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));\nconst checks = [];\nfor (const field of ['invoice_number', 'date', 'vendor', 'currency', 'total']) {\n  const ok = doc[field] !== undefined && doc[field] !== null && doc[field] !== '';\n  checks.push({ name: 'required field: ' + field, ok, detail: String(doc[field] ?? 'missing') });\n}\nconst dateOk = typeof doc.date === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(doc.date);\nchecks.push({ name: 'date format YYYY-MM-DD', ok: dateOk, detail: String(doc.date) });\n\nconst items = Array.isArray(doc.line_items) ? doc.line_items : [];\nconst itemsSum = items.reduce((acc, it) => acc + Number(it.amount ?? (num(it.quantity) * num(it.unit_price)) ?? 0), 0);\nconst subtotal = num(doc.subtotal) ?? 0;\nconst tax = num(doc.tax) ?? 0;\nconst total = num(doc.total) ?? 0;\nconst subtotalOk = Math.abs(itemsSum - subtotal) <= 0.02;\nchecks.push({ name: 'subtotal matches line items', ok: subtotalOk, detail: 'items=' + itemsSum.toFixed(2) + ' stated=' + subtotal.toFixed(2) });\nconst totalOk = Math.abs(subtotal + tax - total) <= 0.02;\nchecks.push({ name: 'total matches subtotal + tax', ok: totalOk, detail: 'expected=' + (subtotal + tax).toFixed(2) + ' stated=' + total.toFixed(2) });\n\nconst status = checks.every((c) => c.ok) ? 'PASS' : 'REVIEW';\n\nreturn [{ json: {\n  status,\n  document: doc,\n  checks,\n  items_count: items.length\n} }];\n"
       },
-      "id": "c7e272fb-edb4-4739-89fc-88b4e08285a0",
+      "id": "9e85b021-3317-450b-bd50-23762d99332c",
       "name": "Parse & Validate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -166,7 +166,7 @@
           "createIfNotExists": true
         }
       },
-      "id": "6f44edb2-fad9-463e-a049-b951ea00a0df",
+      "id": "4f5a188a-f361-4809-a202-6bbdfea6cb56",
       "name": "Create Ledger Table",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -199,7 +199,7 @@
         },
         "options": {}
       },
-      "id": "561419a6-b8bd-47f1-9caf-f48652928b16",
+      "id": "4b5145f4-4382-4c90-9968-8cca9129efcd",
       "name": "Log to Ledger",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -223,7 +223,7 @@
           }
         }
       },
-      "id": "f1c7a22c-86a1-4d03-8aae-f577f8998e2f",
+      "id": "bb4e821a-d636-4c5f-b50a-cf1a697372e1",
       "name": "Report",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -321,7 +321,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "77df3f29-cc56-4a4b-9ab1-f55b3b246752",
+  "versionId": "e50573a4-894b-4efb-8f2d-23bb243b8e94",
   "meta": {
     "templateCredsSetupCompleted": true
   },

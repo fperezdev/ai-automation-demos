@@ -9,7 +9,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "a9c49272-d4a9-4e56-8d97-b8dee29539bc",
+      "id": "8ed303b8-11f0-4e30-a3ff-99bbfc6e3e0e",
       "name": "Chat Page",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -34,7 +34,7 @@
           }
         }
       },
-      "id": "858ebabe-777c-4c5e-a096-f63c9522cffd",
+      "id": "b9fc56c4-57ba-484d-9b11-330980a14ef4",
       "name": "Serve Chat Page",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -50,7 +50,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "cf69ec71-2fa3-48a7-a246-2e649243a863",
+      "id": "f173c241-6f49-4e61-a3a8-432e74484e65",
       "name": "Chat",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -64,7 +64,7 @@
       "parameters": {
         "jsCode": "const raw = $input.first().json;\nconst payload = raw.body || raw;\nconst messages = Array.isArray(payload.messages) ? payload.messages.slice(-12) : [];\nconst system = \"You are the support assistant for 'Northwind Bakery', a small bakery. You answer questions about products, prices, opening hours and delivery, and you help customers place orders. Business facts: open Mon-Sat 8:00-19:00; sourdough $6; gluten-free bread $8; delivery within the city $5 (free over $40); custom cakes need 48h notice; refunds handled by a human. Rules: be concise and friendly. Never invent prices or policies. Escalate (handoff=true) when: the customer asks for a refund or complaint, asks for something outside the menu, is clearly frustrated, or explicitly asks for a human, or provides contact details to be called back. Return ONLY a JSON object: {\\\"reply\\\": \\\"<message to the customer>\\\", \\\"intent\\\": \\\"<short label>\\\", \\\"sentiment\\\": \\\"positive\\\"|\\\"neutral\\\"|\\\"negative\\\", \\\"handoff\\\": true|false, \\\"handoff_reason\\\": \\\"<short reason or empty>\\\"}\";\nreturn [{ json: { messages: [{ role: 'system', content: system }].concat(messages) } }];\n"
       },
-      "id": "55d01fb2-e191-4024-aa0e-4ffecc4277d2",
+      "id": "5e17fde3-dc29-42b9-9537-134f61d84843",
       "name": "Agent Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -79,12 +79,12 @@
         "url": "http://127.0.0.1:8770/chat",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0.2 }) }}",
+        "jsonBody": "={{ JSON.stringify({ messages: $json.messages, temperature: 0.2, response_format: { type: 'json_object' } }) }}",
         "options": {
           "timeout": 60000
         }
       },
-      "id": "c452e887-6dab-4e89-8bf7-ee991cef3912",
+      "id": "edb78402-ee80-40f2-a726-e573e043c5ef",
       "name": "LLM Agent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -95,9 +95,9 @@
     },
     {
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\nif (start === -1) throw new Error('Agent did not return JSON: ' + content.slice(0, 200));\nconst out = JSON.parse(content.slice(start, end + 1));\nconst chatRaw = $('Chat').first().json;\nconst chatBody = chatRaw.body || chatRaw;\nconst session = chatBody.session_id || 'demo-session';\n\nreturn [{ json: {\n  reply: out.reply || 'Let me connect you with a human.',\n  intent: out.intent || 'unknown',\n  sentiment: out.sentiment || 'neutral',\n  handoff: Boolean(out.handoff),\n  handoff_reason: out.handoff_reason || '',\n  session_id: session,\n  transcript: (chatBody.messages || []).map(m => (m.role === 'user' ? 'Customer: ' : 'Agent: ') + m.content).join('\\n'),\n} }];\n"
+        "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\n\nlet out;\nif (start === -1 || end === -1) {\n  // The model replied with plain text instead of JSON: use it as the reply and\n  // infer handoff from the wording so the demo never breaks.\n  const mentionsHuman = /human|team member|passed your request|someone will follow|real person/i.test(content);\n  out = {\n    reply: content || 'Let me connect you with a human.',\n    intent: 'unstructured_reply',\n    sentiment: 'neutral',\n    handoff: mentionsHuman,\n    handoff_reason: mentionsHuman ? 'Escalated in free-form reply' : '',\n  };\n} else {\n  out = JSON.parse(content.slice(start, end + 1));\n}\nconst chatRaw = $('Chat').first().json;\nconst chatBody = chatRaw.body || chatRaw;\nconst session = chatBody.session_id || 'demo-session';\n\nreturn [{ json: {\n  reply: out.reply || 'Let me connect you with a human.',\n  intent: out.intent || 'unknown',\n  sentiment: out.sentiment || 'neutral',\n  handoff: Boolean(out.handoff),\n  handoff_reason: out.handoff_reason || '',\n  session_id: session,\n  transcript: (chatBody.messages || []).map(m => (m.role === 'user' ? 'Customer: ' : 'Agent: ') + m.content).join('\\n'),\n} }];\n"
       },
-      "id": "349675de-3f73-403e-84c1-d9a450050902",
+      "id": "9b5920b0-c11d-413e-bbc4-58d2997be908",
       "name": "Parse Agent Reply",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -121,7 +121,7 @@
           }
         }
       },
-      "id": "8b07a1a6-4313-49d6-b313-73a8b93c9897",
+      "id": "5dc08c3f-1947-4070-bf0e-87ea893946a3",
       "name": "Reply",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -140,7 +140,7 @@
           },
           "conditions": [
             {
-              "id": "1288c896-82f9-48a9-8fff-e75ac0ef640d",
+              "id": "4447128f-5395-497a-8baf-980c2dd29c5e",
               "leftValue": "={{ $json.handoff }}",
               "rightValue": true,
               "operator": {
@@ -154,7 +154,7 @@
         },
         "options": {}
       },
-      "id": "ed6eb095-06d9-44bf-bcd6-2b1644c3ce3d",
+      "id": "4894055e-d462-4a5d-a902-797fee782ea0",
       "name": "Needs Handoff?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -196,7 +196,7 @@
           "createIfNotExists": true
         }
       },
-      "id": "39dae579-a442-4668-872e-9c22b5efb3a5",
+      "id": "9db55bc1-5516-4d3e-99d2-d9a55ec3110e",
       "name": "Create Handoffs Table",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -226,7 +226,7 @@
         },
         "options": {}
       },
-      "id": "da8c77f1-690c-435e-90dc-15d6869f1d05",
+      "id": "c1c80431-9347-4759-8027-f67e59cfbc7f",
       "name": "Log Handoff",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -325,7 +325,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "dcd542e4-5c6e-4d0f-a619-a4141da98899",
+  "versionId": "28223abb-8dc5-477f-8d59-f5a1794e38e6",
   "meta": {
     "templateCredsSetupCompleted": true
   },

@@ -1,0 +1,54 @@
+# Runnable end-to-end stack for the three demos: n8n + a deterministic mock LLM.
+#
+#   make up      -> starts n8n (http://localhost:5688) and the mock LLM
+#   make demo    -> runs the smoke test (all three workflows, real HTTP calls)
+#   make down    -> stops everything and wipes the n8n volume
+#
+# The mock LLM exists so the whole thing runs with zero API keys and zero cost.
+# To use a real model instead: point LLM_HOST at it, or edit the `LLM` node URL
+# in the n8n UI (any OpenAI-compatible endpoint works).
+name: ai-automation-demos
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.40.7
+    container_name: demos-n8n
+    restart: unless-stopped
+    ports:
+      - "5688:5678" # host 5678 is often already taken; 5688 keeps this stack isolated
+    environment:
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      GENERIC_TIMEZONE: "UTC"
+      LLM_HOST: mock-llm
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+      - ./docker/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    depends_on:
+      mock-llm:
+        condition: service_healthy
+
+  mock-llm:
+    image: python:3.12-alpine
+    container_name: demos-mock-llm
+    restart: unless-stopped
+    command: ["python", "/app/mock_llm.py", "--port", "8770"]
+    volumes:
+      - ./scripts/mock_llm.py:/app/mock_llm.py:ro
+    ports:
+      - "8780:8770" # optional: lets you curl the mock directly
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8770/health')
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  n8n_data:

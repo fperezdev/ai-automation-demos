@@ -2,6 +2,9 @@
 
 A chat agent that answers customer questions from your business facts, and escalates to a human exactly when it should.
 
+> **Run it:** `make up && make demo` — see the [Quickstart](../README.md#quickstart-one-command-no-api-keys).
+> The repo ships a deterministic mock LLM, so it runs end to end with no API key and no cost.
+
 ## Problem
 
 Small businesses lose sales answering the same questions all day, and ignore DMs at night. A naive bot that answers everything is worse than nothing — it needs to know when to hand off.

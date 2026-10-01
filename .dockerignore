@@ -1,0 +1,4 @@
+n8n_data
+*.pyc
+__pycache__/
+.git

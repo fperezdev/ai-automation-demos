@@ -2,6 +2,9 @@
 
 Turn a folder of PDF invoices into a validated ledger, without manual typing.
 
+> **Run it:** `make up && make demo` — see the [Quickstart](../README.md#quickstart-one-command-no-api-keys).
+> The repo ships a deterministic mock LLM, so it runs end to end with no API key and no cost.
+
 ## Problem
 
 Small businesses receive invoices as PDF attachments. Someone has to open each one, copy the invoice number, date, vendor, amounts and tax into a spreadsheet, and hope no total is wrong. It is slow, boring and error-prone.

@@ -2,6 +2,9 @@
 
 Turn raw form submissions into scored, enriched leads with a ready-to-send follow-up email.
 
+> **Run it:** `make up && make demo` — see the [Quickstart](../README.md#quickstart-one-command-no-api-keys).
+> The repo ships a deterministic mock LLM, so it runs end to end with no API key and no cost.
+
 ## Problem
 
 Leads arrive as plain form messages. Someone has to research the company, decide if it is worth pursuing, and write a follow-up email — usually hours later. Good leads go cold.

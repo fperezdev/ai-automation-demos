@@ -36,6 +36,10 @@ Then open <http://localhost:5688> (n8n UI — on the first visit it asks you to 
 | Lead capture form | <http://localhost:5688/webhook/lead-gen> |
 | Support chat | <http://localhost:5688/webhook/support-agent> |
 
+![make demo — all 12 checks passing](assets/demo.gif)
+
+*The GIF is a replay of a real `make demo` run, not a mock-up: the checks and their output are exactly what the smoke test prints.*
+
 ### Why a *mock* LLM?
 
 The workflows talk to any OpenAI-compatible chat endpoint (`messages` → `choices[0].message.content`). So the repo ships a tiny deterministic stand-in — [`scripts/mock_llm.py`](scripts/mock_llm.py), stdlib only — that answers the same contract with rules instead of a model:

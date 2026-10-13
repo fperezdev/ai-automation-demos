@@ -22,7 +22,7 @@
       },
       {
         "user": "y el blanqueamiento? cuánto sale",
-        "assistant": "El blanqueamiento cuesta $120.000.",
+        "assistant": "El blanqueamiento tiene un costo de $120.000.",
         "sources": [
           "Precios y presupuestos"
         ],
@@ -32,7 +32,7 @@
       },
       {
         "user": "perfecto, quiero agendar para el sábado en la mañana",
-        "assistant": "Genial, envíame tu nombre completo, RUT y la hora exacta que prefieres el sábado por la mañana y confirmamos tu cita.",
+        "assistant": "¡Genial! Para agendar el sábado en la mañana, envíanos tu nombre completo, RUT y la hora que prefieres y lo confirmamos al instante.",
         "sources": [
           "Agendar, reagendar o cancelar hora",
           "Horarios de atención"
@@ -61,7 +61,7 @@
         ],
         "handoff": false,
         "handoff_reason": "",
-        "sentiment": "neutral"
+        "sentiment": "positive"
       },
       {
         "user": "atienden isapre?",
@@ -95,7 +95,7 @@
     "exchanges": [
       {
         "user": "hola, es de noche y me duele muchísimo una muela, pueden atenderme ahora?",
-        "assistant": "Lamentamos mucho tu dolor; fuera de nuestro horario te derivamos a un servicio de urgencia dental 24 h.",
+        "assistant": "Lamentamos tu dolor, fuera de nuestro horario te derivamos a un servicio de urgencia dental 24 h.",
         "sources": [
           "Urgencias dentales"
         ],

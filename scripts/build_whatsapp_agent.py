@@ -124,9 +124,11 @@ const body = raw.body || raw;
 let sender = '';
 let text = '';
 let messages = [];
+let channel = 'test';
 
 if (body.object === 'whatsapp_business_account') {
   // ---- WhatsApp Cloud API ----
+  channel = 'whatsapp';
   const change = (((body.entry || [])[0] || {}).changes || [])[0] || {};
   const value = change.value || {};
   const msg = ((value.messages || [])[0]) || {};
@@ -148,10 +150,9 @@ if (body.object === 'whatsapp_business_account') {
   messages = [{ role: 'user', content: text }];
 }
 
-if (!text) {
-  throw new Error('No message text found in payload');
-}
-return [{ json: { sender, text, messages } }];
+// Status updates, read receipts and other Meta events carry no user text.
+// Don't throw (Meta would retry in a loop): flag it so the flow can ack and stop.
+return [{ json: { sender, text, messages, channel, skip: !text } }];
 """
 
 RETRIEVE_JS = (
@@ -300,6 +301,7 @@ return [{ json: {
   handoff: Boolean(out.handoff),
   handoff_reason: out.handoff_reason || '',
   sender,
+  channel: (() => { try { return $('Parse Incoming').first().json.channel || 'test'; } catch (e) { return 'test'; } })(),
   sources: prev.sources || [],
   transcript,
 } }];
@@ -339,6 +341,24 @@ def build():
 
         node("Parse Incoming", "n8n-nodes-base.code", 2, {"jsCode": PARSE_INCOMING_JS}, [220, 240]),
 
+        node("Has Message?", "n8n-nodes-base.if", 2.2, {
+            "conditions": {
+                "options": {"caseSensitive": False, "leftValue": "", "typeValidation": "loose"},
+                "conditions": [{
+                    "id": str(uuid.uuid4()),
+                    "leftValue": "={{ $json.text || '' }}",
+                    "rightValue": "",
+                    "operator": {"type": "string", "operation": "notEmpty", "singleValue": True},
+                }],
+                "combinator": "and",
+            },
+            "options": {},
+        }, [220, 420]),
+
+        node("Webhook Ack", "n8n-nodes-base.respondToWebhook", 1.4, {
+            "respondWith": "text", "responseBody": "", "options": {},
+        }, [440, 540]),
+
         node("Retrieve FAQ (RAG)", "n8n-nodes-base.code", 2, {"jsCode": RETRIEVE_JS}, [440, 240]),
 
         node("Build Prompt", "n8n-nodes-base.code", 2, {"jsCode": BUILD_PROMPT_JS}, [660, 240]),
@@ -350,6 +370,20 @@ def build():
         }, [880, 240]),
 
         node("Parse Reply", "n8n-nodes-base.code", 2, {"jsCode": PARSE_REPLY_JS}, [1100, 240]),
+
+        node("Send to WhatsApp?", "n8n-nodes-base.if", 2.2, {
+            "conditions": {
+                "options": {"caseSensitive": False, "leftValue": "", "typeValidation": "loose"},
+                "conditions": [{
+                    "id": str(uuid.uuid4()),
+                    "leftValue": "={{ $json.channel || 'test' }}",
+                    "rightValue": "whatsapp",
+                    "operator": {"type": "string", "operation": "equals", "singleValue": True},
+                }],
+                "combinator": "and",
+            },
+            "options": {},
+        }, [1320, 120]),
 
         node("Reply", "n8n-nodes-base.respondToWebhook", 1.4, {
             "respondWith": "json",
@@ -409,7 +443,7 @@ def build():
             "specifyBody": "json",
             "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.sender, type: 'text', text: { body: $json.reply } }) }}",
             "options": {"timeout": 30000},
-        }, [1540, 120], extra={"disabled": True}),
+        }, [1540, 120], extra={"disabled": True, "onError": "continueRegularOutput"}),
     ]
 
     connections = {
@@ -418,14 +452,23 @@ def build():
             [{"node": "Parse Incoming", "type": "main", "index": 0}],
         ]},
         "Check Token": {"main": [[{"node": "Verify Response", "type": "main", "index": 0}]]},
-        "Parse Incoming": {"main": [[{"node": "Retrieve FAQ (RAG)", "type": "main", "index": 0}]]},
+        "Parse Incoming": {"main": [[{"node": "Has Message?", "type": "main", "index": 0}]]},
+        "Has Message?": {"main": [
+            [{"node": "Retrieve FAQ (RAG)", "type": "main", "index": 0}],
+            [{"node": "Webhook Ack", "type": "main", "index": 0}],
+        ]},
         "Retrieve FAQ (RAG)": {"main": [[{"node": "Build Prompt", "type": "main", "index": 0}]]},
         "Build Prompt": {"main": [[{"node": "LLM Agent", "type": "main", "index": 0}]]},
         "LLM Agent": {"main": [[{"node": "Parse Reply", "type": "main", "index": 0}]]},
         "Parse Reply": {"main": [[
-            {"node": "Reply", "type": "main", "index": 0},
+            {"node": "Send to WhatsApp?", "type": "main", "index": 0},
             {"node": "Needs Handoff?", "type": "main", "index": 0},
         ]]},
+        "Send to WhatsApp?": {"main": [
+            [{"node": "Send via Graph API", "type": "main", "index": 0}],
+            [{"node": "Reply", "type": "main", "index": 0}],
+        ]},
+        "Send via Graph API": {"main": [[{"node": "Reply", "type": "main", "index": 0}]]},
         "Needs Handoff?": {"main": [[{"node": "Create Handoffs Table", "type": "main", "index": 0}], []]},
         "Create Handoffs Table": {"main": [[{"node": "Log Handoff", "type": "main", "index": 0}]]},
     }

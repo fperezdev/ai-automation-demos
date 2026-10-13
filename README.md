@@ -59,6 +59,7 @@ That keeps the demos **runnable offline, in seconds, with zero cost and zero key
 | 01 | [Invoice & document automation](docs/doc-automation.md) | Upload a PDF invoice → LLM extracts structured fields → validation rules flag mismatches → Data Table ledger + HTML report | ✅ |
 | 02 | [Lead generation & enrichment](docs/lead-gen.md) | Form webhook → site enrichment + LLM scoring (HOT/WARM/COLD) → Data Table + follow-up email draft | ✅ |
 | 03 | [AI support agent](docs/ai-support-agent.md) | Webchat agent on n8n: business FAQ + qualification + human handoff with transcript logging | ✅ |
+| 04 | [WhatsApp dental assistant (RAG)](docs/whatsapp-dental-agent.md) | WhatsApp Cloud API channel → TF-IDF RAG over a clinic knowledge base → grounded answers + human handoff | ✅ |
 
 ## Architecture
 

@@ -1,0 +1,108 @@
+[
+  {
+    "id": "c1-precios-agenda",
+    "title": "Consulta de precios + agendar hora",
+    "sender": "56911110001",
+    "turns": [
+      "Hola, cuánto cuesta una limpieza dental?",
+      "y el blanqueamiento? cuánto sale",
+      "perfecto, quiero agendar para el sábado en la mañana"
+    ],
+    "exchanges": [
+      {
+        "user": "Hola, cuánto cuesta una limpieza dental?",
+        "assistant": "La limpieza dental cuesta $35.000.",
+        "sources": [
+          "Precios y presupuestos",
+          "Urgencias dentales"
+        ],
+        "handoff": false,
+        "handoff_reason": "",
+        "sentiment": "neutral"
+      },
+      {
+        "user": "y el blanqueamiento? cuánto sale",
+        "assistant": "El blanqueamiento cuesta $120.000.",
+        "sources": [
+          "Precios y presupuestos"
+        ],
+        "handoff": false,
+        "handoff_reason": "",
+        "sentiment": "neutral"
+      },
+      {
+        "user": "perfecto, quiero agendar para el sábado en la mañana",
+        "assistant": "Genial, envíame tu nombre completo, RUT y la hora exacta que prefieres el sábado por la mañana y confirmamos la cita.",
+        "sources": [
+          "Agendar, reagendar o cancelar hora",
+          "Horarios de atención"
+        ],
+        "handoff": false,
+        "handoff_reason": "",
+        "sentiment": "positive"
+      }
+    ]
+  },
+  {
+    "id": "c2-ubicacion-pagos",
+    "title": "Cómo llegar + previsión y convenios",
+    "sender": "56911110002",
+    "turns": [
+      "hola, dónde quedan? voy en metro",
+      "atienden isapre?",
+      "y por la empresa de mi trabajo hay algún descuento?"
+    ],
+    "exchanges": [
+      {
+        "user": "hola, dónde quedan? voy en metro",
+        "assistant": "Estamos en Av. Irarrázaval 3421, segundo piso, a 3 minutos del Metro Chile España (Línea 3).",
+        "sources": [
+          "Ubicación y cómo llegar"
+        ],
+        "handoff": false,
+        "handoff_reason": "",
+        "sentiment": "neutral"
+      },
+      {
+        "user": "atienden isapre?",
+        "assistant": "Sí, atendemos Isapre en modalidad de reembolso.",
+        "sources": [
+          "Convenios, previsión y formas de pago"
+        ],
+        "handoff": false,
+        "handoff_reason": "",
+        "sentiment": "neutral"
+      },
+      {
+        "user": "y por la empresa de mi trabajo hay algún descuento?",
+        "assistant": "Sí, con la credencial de tu empresa tienes 15 % de descuento.",
+        "sources": [
+          "Convenios, previsión y formas de pago"
+        ],
+        "handoff": false,
+        "handoff_reason": "",
+        "sentiment": "positive"
+      }
+    ]
+  },
+  {
+    "id": "c3-urgencia-handoff",
+    "title": "Urgencia fuera de horario (deriva a humano)",
+    "sender": "56911110003",
+    "turns": [
+      "hola, es de noche y me duele muchísimo una muela, pueden atenderme ahora?"
+    ],
+    "exchanges": [
+      {
+        "user": "hola, es de noche y me duele muchísimo una muela, pueden atenderme ahora?",
+        "assistant": "Lamentamos tu dolor, fuera de nuestro horario te derivamos a un servicio de urgencia dental 24 h.",
+        "sources": [
+          "Urgencias dentales"
+        ],
+        "handoff": true,
+        "handoff_reason": "Urgencia fuera de horario, derivación a servicio 24h",
+        "sentiment": "neutral"
+      }
+    ]
+  }
+]

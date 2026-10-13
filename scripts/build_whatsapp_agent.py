@@ -264,7 +264,14 @@ const end = content.lastIndexOf('}');
 
 let out;
 if (start === -1 || end === -1) {
-  out = { reply: content || 'En breve te contacta una persona del equipo.', intent: 'unstructured', sentiment: 'neutral', handoff: true, handoff_reason: 'Respuesta no estructurada' };
+  // Model returned free text instead of JSON. Salvage a clean reply and only
+  // escalate if the wording really signals a handoff.
+  const t = content
+    .replace(/\s*"?\b(intent|sentiment|handoff|handoff_reason)\b"?\s*:[\s\S]*$/i, '')
+    .trim()
+    .replace(/[\s,;:"}]+$/, '');
+  const esc = /deriv|humano|una persona|urgencia dental 24|fuera de (nuestro )?horario/i.test(t);
+  out = { reply: t || 'En breve te contacta una persona del equipo.', intent: 'unstructured', sentiment: 'neutral', handoff: esc, handoff_reason: esc ? 'Derivación en respuesta libre' : '' };
 } else {
   out = JSON.parse(content.slice(start, end + 1));
 }
@@ -317,22 +324,18 @@ def node(name, ntype, type_version, parameters, position, node_id=None, webhook_
 
 def build():
     nodes = [
-        # --- WhatsApp Cloud API webhook verification (GET) ---
-        node("WhatsApp Verify", "n8n-nodes-base.webhook", 2, {
-            "httpMethod": "GET", "path": "whatsapp-dental", "responseMode": "responseNode", "options": {},
-        }, [0, 0], webhook_id="demo-whatsapp-verify"),
+        # --- Single webhook: Meta uses ONE callback URL for GET (verification) and POST (messages) ---
+        node("WhatsApp Webhook", "n8n-nodes-base.webhook", 2, {
+            "multipleMethods": True, "httpMethod": ["GET", "POST"],
+            "path": "whatsapp-dental", "responseMode": "responseNode", "options": {},
+        }, [0, 120], webhook_id="demo-whatsapp"),
 
-        node("Check Token", "n8n-nodes-base.code", 2, {"jsCode": VERIFY_JS}, [220, 0]),
+        node("Check Token", "n8n-nodes-base.code", 2, {"jsCode": VERIFY_JS}, [440, 0]),
 
         node("Verify Response", "n8n-nodes-base.respondToWebhook", 1.4, {
             "respondWith": "text", "responseBody": "={{ $json.body }}",
             "options": {"responseHeaders": {"entries": [{"name": "Content-Type", "value": "text/plain; charset=utf-8"}]}},
-        }, [440, 0]),
-
-        # --- Incoming message (POST). Serves the Meta webhook AND the test harness ---
-        node("WhatsApp Incoming", "n8n-nodes-base.webhook", 2, {
-            "httpMethod": "POST", "path": "whatsapp-dental/hook", "responseMode": "responseNode", "options": {},
-        }, [0, 240], webhook_id="demo-whatsapp-hook"),
+        }, [660, 0]),
 
         node("Parse Incoming", "n8n-nodes-base.code", 2, {"jsCode": PARSE_INCOMING_JS}, [220, 240]),
 
@@ -410,9 +413,11 @@ def build():
     ]
 
     connections = {
-        "WhatsApp Verify": {"main": [[{"node": "Check Token", "type": "main", "index": 0}]]},
+        "WhatsApp Webhook": {"main": [
+            [{"node": "Check Token", "type": "main", "index": 0}],
+            [{"node": "Parse Incoming", "type": "main", "index": 0}],
+        ]},
         "Check Token": {"main": [[{"node": "Verify Response", "type": "main", "index": 0}]]},
-        "WhatsApp Incoming": {"main": [[{"node": "Parse Incoming", "type": "main", "index": 0}]]},
         "Parse Incoming": {"main": [[{"node": "Retrieve FAQ (RAG)", "type": "main", "index": 0}]]},
         "Retrieve FAQ (RAG)": {"main": [[{"node": "Build Prompt", "type": "main", "index": 0}]]},
         "Build Prompt": {"main": [[{"node": "LLM Agent", "type": "main", "index": 0}]]},

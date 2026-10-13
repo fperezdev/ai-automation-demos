@@ -4,31 +4,35 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "GET",
+        "multipleMethods": true,
+        "httpMethod": [
+          "GET",
+          "POST"
+        ],
         "path": "whatsapp-dental",
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "85bead3b-6018-427a-8d10-f88c81c173a9",
-      "name": "WhatsApp Verify",
+      "id": "8f01272c-ed82-4002-9fb6-24e8c04880ac",
+      "name": "WhatsApp Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
         0,
-        0
+        120
       ],
-      "webhookId": "demo-whatsapp-verify"
+      "webhookId": "demo-whatsapp"
     },
     {
       "parameters": {
         "jsCode": "// WhatsApp Cloud API webhook verification (GET).\n// Meta sends ?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...\n// We echo back hub.challenge when the token matches WHATSAPP_VERIFY_TOKEN\n// (if the env var is unset we accept any token so the demo works out of the box).\nconst q = $input.first().json.query || {};\nconst mode = q['hub.mode'] || q.hub_mode || '';\nconst token = q['hub.verify_token'] || q.hub_verify_token || '';\nconst challenge = q['hub.challenge'] || q.hub_challenge || '';\nconst expected = (() => { try { return ($env && $env.WHATSAPP_VERIFY_TOKEN) || ''; } catch (e) { return ''; } })();\nconst ok = mode === 'subscribe' && (!expected || token === expected);\nreturn [{ json: { ok, challenge: ok ? challenge : '', body: ok ? challenge : 'forbidden' } }];\n"
       },
-      "id": "138321ee-949e-4431-a455-290eb4f519ab",
+      "id": "5850d896-96f3-4434-bf8a-08b60187ea25",
       "name": "Check Token",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        220,
+        440,
         0
       ]
     },
@@ -47,37 +51,20 @@
           }
         }
       },
-      "id": "d733de83-1170-417d-96bc-b02702253775",
+      "id": "7fcf95e6-9d89-4f5e-b9bc-3c21d5ca1c82",
       "name": "Verify Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        440,
+        660,
         0
       ]
     },
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "whatsapp-dental/hook",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "34f5ebcb-defe-4cde-b0ed-cd55bd1d04f4",
-      "name": "WhatsApp Incoming",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        0,
-        240
-      ],
-      "webhookId": "demo-whatsapp-hook"
-    },
-    {
-      "parameters": {
         "jsCode": "// Accepts both a real WhatsApp Cloud API payload and a simple test payload:\n//   real : { object: 'whatsapp_business_account', entry: [...] }\n//   test : { messages: [{role,content}...] }  or  { text: '...', history: [...] }\nconst raw = $input.first().json;\nconst body = raw.body || raw;\n\nlet sender = '';\nlet text = '';\nlet messages = [];\n\nif (body.object === 'whatsapp_business_account') {\n  // ---- WhatsApp Cloud API ----\n  const change = (((body.entry || [])[0] || {}).changes || [])[0] || {};\n  const value = change.value || {};\n  const msg = ((value.messages || [])[0]) || {};\n  sender = msg.from || '';\n  text = (msg.text && msg.text.body) || (msg.button && msg.button.text) || '';\n  // Meta delivers one message per webhook; conversation context lives in a\n  // session store in production (see docs). The demo answers each turn from the KB.\n  messages = [{ role: 'user', content: text }];\n} else if (Array.isArray(body.messages)) {\n  // ---- test payload with a full conversation ----\n  messages = body.messages.filter((m) => m && m.content).map((m) => ({ role: m.role || 'user', content: String(m.content) }));\n  sender = body.from || 'test-user';\n  const last = [...messages].reverse().find((m) => m.role === 'user');\n  text = last ? last.content : '';\n} else {\n  // ---- test payload, single message ----\n  text = String(body.text || '');\n  sender = body.from || 'test-user';\n  messages = [{ role: 'user', content: text }];\n}\n\nif (!text) {\n  throw new Error('No message text found in payload');\n}\nreturn [{ json: { sender, text, messages } }];\n"
       },
-      "id": "20d77ffe-394e-4bc1-a5e1-1623273c6501",
+      "id": "033d032e-9bfe-4859-b9f8-10e1e806d4a6",
       "name": "Parse Incoming",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -90,7 +77,7 @@
       "parameters": {
         "jsCode": "// Lightweight retrieval-augmented generation (RAG) step.\n// TF-IDF over the clinic knowledge base: tokenize (Spanish, accent- and\n// stopword-normalised), score each chunk against the user's question with a\n// cosine-like tf-idf dot product, and keep the best matches.\nconst KB = [{\"id\": \"horarios\", \"topic\": \"Horarios de atención\", \"text\": \"Atendemos de lunes a viernes de 9:00 a 19:00 y sábados de 10:00 a 14:00. Domingos y festivos permanecemos cerrados. La última hora que se puede agendar es 30 minutos antes del cierre.\"}, {\"id\": \"precios\", \"topic\": \"Precios y presupuestos\", \"text\": \"Consulta de evaluación: $15.000. Destartraje / limpieza dental: $35.000. Blanqueamiento: $120.000. Resina (restauración): $45.000. Extracción simple: $40.000. Endodoncia: desde $150.000. El presupuesto definitivo se entrega después de la evaluación.\"}, {\"id\": \"ubicacion\", \"topic\": \"Ubicación y cómo llegar\", \"text\": \"Estamos en Av. Irarrázaval 3421, Ñuñoa, Santiago (segundo piso). A 3 minutos caminando del Metro Chile España (Línea 3). El edificio tiene estacionamiento con convenio.\"}, {\"id\": \"agenda\", \"topic\": \"Agendar, reagendar o cancelar hora\", \"text\": \"Puedes agendar por WhatsApp: envíanos tu nombre completo, RUT y el día u horario de preferencia, y confirmamos en el momento. Para reagendar o cancelar, avisa con al menos 24 horas de anticipación, sin costo.\"}, {\"id\": \"pagos\", \"topic\": \"Convenios, previsión y formas de pago\", \"text\": \"Atendemos Fonasa (con bono) e Isapre (modalidad reembolso). Aceptamos débito, crédito hasta 3 cuotas sin interés y transferencia. Convenios con empresas: 15% de descuento presentando credencial.\"}, {\"id\": \"urgencias\", \"topic\": \"Urgencias dentales\", \"text\": \"Si tienes dolor agudo —una muela que duele mucho—, una emergencia o una urgencia dental, tiene preferencia: contamos con cupos de urgencia el mismo día dentro del horario de atención. Fuera de horario derivamos a un servicio de urgencia dental 24 horas.\"}, {\"id\": \"servicios\", \"topic\": \"Servicios y tratamientos\", \"text\": \"Realizamos odontología general, limpiezas, blanqueamientos, restauraciones (resinas), endodoncias, extracciones y control de niños. Ortodoncia e implantes se evalúan con presupuesto aparte.\"}];\n\nconst STOP = new Set(('de la que el en y a los del se las por un para con no una su al lo como mas pero sus le ya o este si porque esta entre cuando muy sin sobre tambien me hasta hay donde quien desde todo nos durante todos uno les ni contra otros ese eso ante ellos e esto mi antes algunos que unos yo otro otras otra el tanto esa estos mucho quienes nada muchos cual poco ella estar estas algunas algo nosotros mi mis tu te ti tus ellas nosotras vosostros vosostras os mio mia mios mias tuyo tuya tuyos tuyas suyo suya suyos suyas nuestro nuestra nuestros nuestras vuestro vuestra vuestros vuestras esos esas estoy estas esta estamos estais estan este este estemos esteis esten estare estaras estara estaremos estareis estaran estaria estarias estariamos estariais estarian estaba estabas estabamos estabais estaban estuve estuviste estuvo estuvimos estuvisteis estuvieron estuviera estuvieras estuvieramos estuvierais estuvieran estuviese estuvieses estuviesemos estuvieseis estuviesen estando estado estada estados estadas estad hola buenas buenos favor gracias queria quisiera necesito podrian puede podria tienen tiene hay'.split(' ')));\n\nfunction norm(s) {\n  return String(s || '')\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s]/g, ' ');\n}\nfunction toks(s) {\n  return norm(s)\n    .split(/\\s+/)\n    .filter((t) => t.length > 2 && !STOP.has(t));\n}\n\n// Document frequency for the idf term.\nconst docs = KB.map((d) => toks(d.topic + ' ' + d.text));\nconst df = {};\nfor (const doc of docs) {\n  for (const t of new Set(doc)) df[t] = (df[t] || 0) + 1;\n}\nconst N = KB.length;\nconst idf = (t) => Math.log(1 + N / (1 + (df[t] || 0)));\n\nconst query = toks($json.text);\nconst qset = {};\nfor (const t of query) qset[t] = (qset[t] || 0) + 1;\n\nconst scored = KB.map((d, i) => {\n  const doc = docs[i];\n  const len = doc.length || 1;\n  let score = 0;\n  for (const t of Object.keys(qset)) {\n    const tf = doc.filter((w) => w === t).length / len;\n    score += (qset[t] / query.length) * tf * idf(t);\n  }\n  return { id: d.id, topic: d.topic, text: d.text, score: Number(score.toFixed(4)) };\n});\n\nscored.sort((a, b) => b.score - a.score);\nconst top = scored.filter((s) => s.score > 0).slice(0, 3);\nconst match = top.length ? top[0].score : 0;\n\nreturn [{ json: {\n  sender: $json.sender,\n  text: $json.text,\n  messages: $json.messages,\n  retrieved: top,\n  retrieval_score: match,\n  has_context: top.length > 0,\n} }];\n"
       },
-      "id": "27a9cb38-9a18-4fea-b063-33e05b617ad2",
+      "id": "df15524a-a090-4841-9d6c-f9183da6b15a",
       "name": "Retrieve FAQ (RAG)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -103,7 +90,7 @@
       "parameters": {
         "jsCode": "// Build the RAG-augmented prompt: retrieved KB chunks go in as context.\nconst prev = $input.first().json;\nconst context = (prev.retrieved || [])\n  .map((r) => '- [' + r.topic + '] ' + r.text)\n  .join('\\n');\n\nconst system = \"Eres el asistente virtual por WhatsApp de la \\\"Clínica Dental Sonrisa Ñuñoa\\\", una clínica dental en Ñuñoa, Santiago de Chile. Clínica dental de barrio en Ñuñoa, Santiago. Equipo de 3 odontólogos y 2 asistentes. Antes respondían el WhatsApp a mano; este asistente responde las consultas frecuentes y deriva a una persona cuando corresponde. Respondes SOLO con la información del CONTEXTO entregado; si algo no está en el contexto, no lo inventes: ofrece derivar con una persona del equipo. Estilo: mensajes breves y cordiales de WhatsApp, en español neutro con tuteo. Usa siempre 'tú'/'tienes'/'puedes'; NUNCA uses voseo ('vos', 'tenés', 'tenís', 'podés', 'querés', 'sabés'). Sin markdown, máximo 3 oraciones. Nunca des diagnósticos ni indicaciones clínicas. Marca handoff=true cuando: sea una urgencia fuera de horario, un reclamo o problema, el cliente pida hablar con una persona, o la respuesta no esté en el contexto. Devuelve SOLO un objeto JSON: {\\\"reply\\\": \\\"<mensaje>\\\", \\\"intent\\\": \\\"<etiqueta>\\\", \\\"sentiment\\\": \\\"positive\\\"|\\\"neutral\\\"|\\\"negative\\\", \\\"handoff\\\": true|false, \\\"handoff_reason\\\": \\\"<motivo o vacío>\\\"}\";\n\nconst messages = [{ role: 'system', content: system }];\nmessages.push({ role: 'user', content: 'CONTEXTO (base de conocimiento):\\n' + (context || '(sin coincidencias en la base)') });\nfor (const m of (prev.messages || [])) messages.push(m);\n\nreturn [{ json: {\n  messages,\n  sender: prev.sender,\n  intent_hint: prev.has_context ? 'kb_match' : 'no_context',\n  sources: (prev.retrieved || []).map((r) => r.topic),\n} }];\n"
       },
-      "id": "49850090-66d1-442c-9a3a-446250bec46d",
+      "id": "8888b98b-e924-4b27-ba84-b95cdc8a3a9f",
       "name": "Build Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -123,7 +110,7 @@
           "timeout": 60000
         }
       },
-      "id": "522e43bf-821a-408a-b527-766e5e940de9",
+      "id": "f62ff285-3ea5-43d2-8a34-d41b89620ebf",
       "name": "LLM Agent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -134,9 +121,9 @@
     },
     {
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\n\nlet out;\nif (start === -1 || end === -1) {\n  out = { reply: content || 'En breve te contacta una persona del equipo.', intent: 'unstructured', sentiment: 'neutral', handoff: true, handoff_reason: 'Respuesta no estructurada' };\n} else {\n  out = JSON.parse(content.slice(start, end + 1));\n}\n\nconst prev = $('Build Prompt').first().json;\n\n// Deterministic guard: normalise any voseo the model slips in.\nconst TUTEO = [\n  [/\\bten[eé]s\\b/gi, 'tienes'], [/\\bten[ií]s\\b/gi, 'tienes'], [/\\bpod[eé]s\\b/gi, 'puedes'],\n  [/\\bquer[eé]s\\b/gi, 'quieres'], [/\\bsab[eé]s\\b/gi, 'sabes'], [/\\bdec[ií]s\\b/gi, 'dices'],\n  [/\\bven[ií]s\\b/gi, 'vienes'], [/\\bsos\\b/gi, 'eres'], [/\\bvos\\b/gi, 'tú'],\n];\nconst norm = (s) => TUTEO.reduce((acc, [re, rep]) => acc.replace(re, rep), String(s || ''));\nconst reply = norm(out.reply || 'En breve te contacta una persona del equipo.');\n\nconst sender = prev.sender || 'test-user';\nconst transcript = (prev.messages || [])\n  .filter((m) => m.role !== 'system')\n  .map((m) => (m.role === 'user' ? 'Cliente: ' : 'Asistente: ') + m.content)\n  .join('\\n') + '\\nAsistente: ' + reply;\n\nreturn [{ json: {\n  reply,\n  intent: out.intent || 'unknown',\n  sentiment: out.sentiment || 'neutral',\n  handoff: Boolean(out.handoff),\n  handoff_reason: out.handoff_reason || '',\n  sender,\n  sources: prev.sources || [],\n  transcript,\n} }];\n"
+        "jsCode": "const resp = $input.first().json;\nlet content = (resp.choices && resp.choices[0] && resp.choices[0].message.content) || '';\ncontent = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\nconst start = content.indexOf('{');\nconst end = content.lastIndexOf('}');\n\nlet out;\nif (start === -1 || end === -1) {\n  // Model returned free text instead of JSON. Salvage a clean reply and only\n  // escalate if the wording really signals a handoff.\n  const t = content\n    .replace(/\\s*\"?\\b(intent|sentiment|handoff|handoff_reason)\\b\"?\\s*:[\\s\\S]*$/i, '')\n    .trim()\n    .replace(/[\\s,;:\"}]+$/, '');\n  const esc = /deriv|humano|una persona|urgencia dental 24|fuera de (nuestro )?horario/i.test(t);\n  out = { reply: t || 'En breve te contacta una persona del equipo.', intent: 'unstructured', sentiment: 'neutral', handoff: esc, handoff_reason: esc ? 'Derivación en respuesta libre' : '' };\n} else {\n  out = JSON.parse(content.slice(start, end + 1));\n}\n\nconst prev = $('Build Prompt').first().json;\n\n// Deterministic guard: normalise any voseo the model slips in.\nconst TUTEO = [\n  [/\\bten[eé]s\\b/gi, 'tienes'], [/\\bten[ií]s\\b/gi, 'tienes'], [/\\bpod[eé]s\\b/gi, 'puedes'],\n  [/\\bquer[eé]s\\b/gi, 'quieres'], [/\\bsab[eé]s\\b/gi, 'sabes'], [/\\bdec[ií]s\\b/gi, 'dices'],\n  [/\\bven[ií]s\\b/gi, 'vienes'], [/\\bsos\\b/gi, 'eres'], [/\\bvos\\b/gi, 'tú'],\n];\nconst norm = (s) => TUTEO.reduce((acc, [re, rep]) => acc.replace(re, rep), String(s || ''));\nconst reply = norm(out.reply || 'En breve te contacta una persona del equipo.');\n\nconst sender = prev.sender || 'test-user';\nconst transcript = (prev.messages || [])\n  .filter((m) => m.role !== 'system')\n  .map((m) => (m.role === 'user' ? 'Cliente: ' : 'Asistente: ') + m.content)\n  .join('\\n') + '\\nAsistente: ' + reply;\n\nreturn [{ json: {\n  reply,\n  intent: out.intent || 'unknown',\n  sentiment: out.sentiment || 'neutral',\n  handoff: Boolean(out.handoff),\n  handoff_reason: out.handoff_reason || '',\n  sender,\n  sources: prev.sources || [],\n  transcript,\n} }];\n"
       },
-      "id": "37eded96-79c7-4fe6-8e39-257249adfcfd",
+      "id": "a80eb11e-83a5-4afd-9ce8-522d8193d7c2",
       "name": "Parse Reply",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -160,7 +147,7 @@
           }
         }
       },
-      "id": "9a068316-9ce5-429c-846a-949c347a5fc6",
+      "id": "2da08d5f-eb11-450d-9d26-51c5680dd3d1",
       "name": "Reply",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -179,7 +166,7 @@
           },
           "conditions": [
             {
-              "id": "c36bf6bb-3dc6-42c6-8a06-e52ea9d5b91d",
+              "id": "dd6819bb-c690-4b08-925e-4e74e94b1299",
               "leftValue": "={{ $json.handoff }}",
               "rightValue": true,
               "operator": {
@@ -193,7 +180,7 @@
         },
         "options": {}
       },
-      "id": "0a0cf246-a50b-4622-91b5-cd379c9e61ac",
+      "id": "b20a3f95-6b48-4444-9382-f050b92ce6c9",
       "name": "Needs Handoff?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -235,7 +222,7 @@
           "createIfNotExists": true
         }
       },
-      "id": "efe23a27-6117-4ba1-8cc7-f65bbd7d01f6",
+      "id": "1c93faf7-c1fd-4691-9f95-c9f7fabb34cb",
       "name": "Create Handoffs Table",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -265,7 +252,7 @@
         },
         "options": {}
       },
-      "id": "8e962550-f78a-4f97-a725-52015228ab5e",
+      "id": "f8f4b9ec-fa94-4f23-9370-43ec5ad2db05",
       "name": "Log Handoff",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
@@ -294,7 +281,7 @@
           "timeout": 30000
         }
       },
-      "id": "1ee3f61a-fd95-43f2-af1d-1167c0e5c4cc",
+      "id": "03a5da9f-fad2-44a6-a5d8-b92acfeac19b",
       "name": "Send via Graph API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -306,11 +293,18 @@
     }
   ],
   "connections": {
-    "WhatsApp Verify": {
+    "WhatsApp Webhook": {
       "main": [
         [
           {
             "node": "Check Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Incoming",
             "type": "main",
             "index": 0
           }
@@ -322,17 +316,6 @@
         [
           {
             "node": "Verify Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "WhatsApp Incoming": {
-      "main": [
-        [
-          {
-            "node": "Parse Incoming",
             "type": "main",
             "index": 0
           }
@@ -427,7 +410,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "66b30538-531b-4810-a81a-fe4c75bc1ba2",
+  "versionId": "2ece8bce-e2df-49c1-82c2-86a97d133aac",
   "meta": {
     "templateCredsSetupCompleted": true
   },

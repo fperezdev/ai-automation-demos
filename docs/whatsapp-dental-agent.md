@@ -13,11 +13,12 @@ information and know when to hand off.
 
 ## What this workflow does
 
-1. **WhatsApp Cloud API channel.** `GET /webhook/whatsapp-dental` performs Meta's
-   webhook verification (echoes `hub.challenge`). `POST /webhook/whatsapp-dental/hook`
-   receives messages. The same POST endpoint also accepts a simple test payload
-   (`{from, text}` or `{from, messages[]}`), so the bot can be exercised without
-   Meta credentials.
+1. **WhatsApp Cloud API channel.** A single URL — `https://<host>/webhook/whatsapp-dental` —
+   serves both Meta webhook methods: `GET` performs the verification (echoes `hub.challenge`) and
+   `POST` receives messages. The *WhatsApp Webhook* node uses *Allow Multiple HTTP Methods*
+   (GET + POST), so each method has its own output. The same `POST` also accepts a simple test
+   payload (`{from, text}` or `{from, messages[]}`), so the bot can be exercised without Meta
+   credentials.
 2. **RAG retrieval.** A *Retrieve FAQ* code node runs a lightweight TF-IDF retrieval
    (Spanish, accent- and stopword-normalised) over the clinic knowledge base and
    keeps the best matching chunks.
@@ -61,7 +62,7 @@ pagos, urgencias, servicios.
 2. Test a turn from the command line:
 
 ```sh
-curl -X POST http://localhost:5678/webhook/whatsapp-dental/hook \
+curl -X POST http://localhost:5678/webhook/whatsapp-dental \
   -H 'Content-Type: application/json' \
   -d '{"from":"56911110001","text":"hola, cuánto cuesta una limpieza dental?"}'
 ```

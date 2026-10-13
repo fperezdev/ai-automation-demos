@@ -32,7 +32,7 @@
       },
       {
         "user": "perfecto, quiero agendar para el sábado en la mañana",
-        "assistant": "Genial, envíame tu nombre completo, RUT y la hora exacta que prefieres el sábado por la mañana y confirmamos la cita.",
+        "assistant": "Genial, envíame tu nombre completo, RUT y la hora exacta que prefieres el sábado por la mañana y confirmamos tu cita.",
         "sources": [
           "Agendar, reagendar o cancelar hora",
           "Horarios de atención"
@@ -55,7 +55,7 @@
     "exchanges": [
       {
         "user": "hola, dónde quedan? voy en metro",
-        "assistant": "Estamos en Av. Irarrázaval 3421, segundo piso, a 3 minutos del Metro Chile España (Línea 3).",
+        "assistant": "¡Hola! Estamos en Av. Irarrázaval 3421, segundo piso, a 3 minutos a pie del Metro Chile España (línea 3).",
         "sources": [
           "Ubicación y cómo llegar"
         ],
@@ -65,13 +65,13 @@
       },
       {
         "user": "atienden isapre?",
-        "assistant": "Sí, atendemos Isapre en modalidad de reembolso.",
+        "assistant": "Sí, atendemos Isapre con modalidad de reembolso.",
         "sources": [
           "Convenios, previsión y formas de pago"
         ],
         "handoff": false,
         "handoff_reason": "",
-        "sentiment": "neutral"
+        "sentiment": "positive"
       },
       {
         "user": "y por la empresa de mi trabajo hay algún descuento?",
@@ -95,13 +95,13 @@
     "exchanges": [
       {
         "user": "hola, es de noche y me duele muchísimo una muela, pueden atenderme ahora?",
-        "assistant": "Lamentamos tu dolor, fuera de nuestro horario te derivamos a un servicio de urgencia dental 24 h.",
+        "assistant": "Lamentamos mucho tu dolor; fuera de nuestro horario te derivamos a un servicio de urgencia dental 24 h.",
         "sources": [
           "Urgencias dentales"
         ],
         "handoff": true,
-        "handoff_reason": "Urgencia fuera de horario, derivación a servicio 24h",
-        "sentiment": "neutral"
+        "handoff_reason": "urgencia fuera de horario",
+        "sentiment": "negative"
       }
     ]
   }

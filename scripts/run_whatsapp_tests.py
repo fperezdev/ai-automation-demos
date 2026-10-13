@@ -13,7 +13,7 @@ import os
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HOOK = os.environ.get("WA_HOOK", "http://127.0.0.1:5678/webhook/whatsapp-dental/hook")
+HOOK = os.environ.get("WA_HOOK", "http://127.0.0.1:5678/webhook/whatsapp-dental")
 OUT = os.path.join(ROOT, "samples", "whatsapp_conversations.json")
 
 CONVERSATIONS = [

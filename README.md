@@ -2,13 +2,15 @@
 
 Production-style automation workflows built with **n8n** + **LLM agents**, designed for small businesses that want to remove repetitive manual work.
 
-These are the reference implementations behind my Upwork services. Each demo is a self-contained n8n workflow with sample data and a short architecture note.
+These are the reference implementations behind the automations I sell to small businesses — four self-contained n8n workflows, each with sample data, a short architecture note and a measured result. When a demo claims something works, `make demo` is what proves it.
+
+**Portfolio:** [fperezdev.github.io](https://fperezdev.github.io/) · **Full suite (4 modules, one panel):** [ai-automation-suite](https://github.com/fperezdev/ai-automation-suite)
 
 ## Quickstart (one command, no API keys)
 
 ```bash
 make up      # starts n8n + a deterministic mock LLM
-make demo    # drives all three workflows over HTTP and asserts on the results
+make demo    # drives all four workflows over HTTP and asserts on the results
 make ui      # prints the URLs to open in the browser
 make down    # stops everything
 ```
@@ -95,7 +97,7 @@ Full instructions per demo in `docs/`.
 docker-compose.yml          n8n + mock LLM, one command
 docker/entrypoint.sh        imports + publishes the workflows on boot
 scripts/mock_llm.py         deterministic OpenAI-compatible stand-in
-scripts/smoke_test.sh       end-to-end test of all three demos
+scripts/smoke_test.sh       end-to-end test of all four demos
 scripts/build_demo_workflows.py   generator for the workflow JSONs
 workflows/*.json            the importable n8n workflows
 samples/*.pdf               sample invoices (one with a deliberate mismatch)
